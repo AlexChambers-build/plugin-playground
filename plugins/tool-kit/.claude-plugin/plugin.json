@@ -1,12 +1,14 @@
 {
   "name": "tool-kit",
-  "description": "Useful commands for development",
   "version": "1.0.0",
+  "description": "Useful commands for development including meta-command creation and command refactoring",
   "author": {
-    "name": "Alex"
+    "name": "Alex",
+    "email": "alex@example.com",
+    "url": "https://github.com/AlexChambers-build"
   },
-  "keywords": ["tool", "development", "commands"],
+  "homepage": "https://github.com/AlexChambers-build/plugin-playground",
+  "repository": "https://github.com/AlexChambers-build/plugin-playground",
   "license": "MIT",
-  "repository": "https://github.com/AlexChambers-build/plugin-playground.git",
-  "commands": "./commands/"
+  "keywords": ["tools", "development", "commands", "utilities"]
 }

@@ -1,20 +1,37 @@
 {
   "name": "plugin-playground",
   "owner": {
-    "name": "Alex"
+    "name": "Alex",
+    "email": "alex@example.com"
+  },
+  "metadata": {
+    "description": "Custom Claude Code plugins for feature development and toolkit utilities",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "feature-dev",
-      "source": "./",
       "description": "A comprehensive plugin for systematic feature development including planning workflows, specification generation, and implementation tracking. Provides slash commands for feature planning and building with deep analysis and gap identification.",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "author": {
+        "name": "Alex"
+      },
+      "source": "./plugins/feature-dev",
+      "category": "developer-tools",
+      "tags": ["feature", "development", "planning", "workflow", "specification"],
+      "keywords": ["feature", "development", "planning", "workflow", "specification"]
     },
     {
       "name": "tool-kit",
-      "source": "./",
-      "description": "Useful commands for development",
-      "version": "1.0.0"
+      "description": "Useful commands for development including meta-command creation and command refactoring",
+      "version": "1.0.0",
+      "author": {
+        "name": "Alex"
+      },
+      "source": "./plugins/tool-kit",
+      "category": "developer-tools",
+      "tags": ["tools", "development", "commands", "utilities"],
+      "keywords": ["tools", "development", "commands", "utilities"]
     }
   ]
 }

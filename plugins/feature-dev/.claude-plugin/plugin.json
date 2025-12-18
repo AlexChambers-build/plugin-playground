@@ -1,12 +1,14 @@
 {
   "name": "feature-dev",
-  "description": "Systematic feature development workflow with phased planning, specification, and implementation capabilities",
   "version": "1.0.0",
+  "description": "Systematic feature development workflow with phased planning, specification, and implementation capabilities",
   "author": {
-    "name": "Alex"
+    "name": "Alex",
+    "email": "alex@example.com",
+    "url": "https://github.com/AlexChambers-build"
   },
-  "keywords": ["feature", "development", "planning", "workflow", "specification"],
+  "homepage": "https://github.com/AlexChambers-build/plugin-playground",
+  "repository": "https://github.com/AlexChambers-build/plugin-playground",
   "license": "MIT",
-  "repository": "https://github.com/AlexChambers-build/plugin-playground.git",
-  "commands": "./commands/"
+  "keywords": ["feature", "development", "planning", "workflow", "specification"]
 }
