@@ -6,7 +6,6 @@
     "name": "Alex"
   },
   "keywords": ["feature", "development", "planning", "workflow", "specification"],
-  "category": "development",
   "license": "MIT",
   "repository": "https://github.com/AlexChambers-build/plugin-playground.git"
 }
