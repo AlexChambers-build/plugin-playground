@@ -7,5 +7,6 @@
   },
   "keywords": ["tool", "development", "commands"],
   "license": "MIT",
-  "repository": "https://github.com/AlexChambers-build/plugin-playground.git"
+  "repository": "https://github.com/AlexChambers-build/plugin-playground.git",
+  "commands": "./commands/"
 }

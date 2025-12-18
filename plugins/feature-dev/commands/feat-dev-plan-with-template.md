@@ -21,7 +21,7 @@ CONTEXT_FILES: $2, $3, $4, ...
 - Used for: Enriching understanding of requirements and constraints
 - Example: @docs/architecture.md @requirements/auth-spec.md
 
-PLAN_TEMPLATE: .claude/templates/feat-dev-plan/plan-template-minimal-v2.md
+PLAN_TEMPLATE: ./templates/feat-dev-plan/plan-template-minimal-v2.md
 - The template structure for generating plan.md
 - Used for: Providing consistent plan documentation format
 

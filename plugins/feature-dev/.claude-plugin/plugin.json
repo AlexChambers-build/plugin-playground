@@ -7,5 +7,6 @@
   },
   "keywords": ["feature", "development", "planning", "workflow", "specification"],
   "license": "MIT",
-  "repository": "https://github.com/AlexChambers-build/plugin-playground.git"
+  "repository": "https://github.com/AlexChambers-build/plugin-playground.git",
+  "commands": "./commands/"
 }
