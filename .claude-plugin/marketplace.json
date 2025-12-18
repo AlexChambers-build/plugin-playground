@@ -1,0 +1,14 @@
+{
+  "name": "plugin-playground",
+  "owner": {
+    "name": "Alex"
+  },
+  "plugins": [
+    {
+      "name": "feature-dev",
+      "source": ".",
+      "description": "A comprehensive plugin for systematic feature development including planning workflows, specification generation, and implementation tracking. Provides slash commands for feature planning and building with deep analysis and gap identification.",
+      "version": "1.0.0"
+    }
+  ]
+}
