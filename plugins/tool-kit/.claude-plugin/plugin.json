@@ -1,0 +1,11 @@
+{
+  "name": "tool-kit",
+  "description": "Useful commands for development",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alex"
+  },
+  "keywords": ["tool", "development", "commands"],
+  "license": "MIT",
+  "repository": "https://github.com/AlexChambers-build/plugin-playground.git"
+}
