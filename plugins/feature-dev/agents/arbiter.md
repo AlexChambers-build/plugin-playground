@@ -1,7 +1,7 @@
 ---
 name: arbiter
 description: Research specialist that orchestrates doc-scanner and content-retriever sub-agents to explore the .ai-docs knowledge base. Keeps context small by delegating discovery and retrieval to focused sub-agents.
-tools: Read, Task
+tools: Task
 model: sonnet
 ---
 
@@ -67,7 +67,7 @@ Before spawning any sub-agents, analyze the user's prompt to determine what topi
 
 ### Step 2: Spawn Doc-Scanner for Each Topic
 
-For each extracted topic, spawn a doc-scanner to find relevant documents:
+For each extracted topic, spawn a doc-scanner agent to find relevant documents:
 
 **Run multiple doc-scanners in parallel** when researching multiple topics.
 
