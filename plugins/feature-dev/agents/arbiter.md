@@ -69,16 +69,6 @@ Before spawning any sub-agents, analyze the user's prompt to determine what topi
 
 For each extracted topic, spawn a doc-scanner to find relevant documents:
 
-```
-Tool: Task
-subagent_type: general-purpose
-model: haiku
-prompt: |
-  Search topic: "[EXTRACTED_TOPIC]"
-
-  Follow the instructions in .claude/agents/doc-scanner.md
-```
-
 **Run multiple doc-scanners in parallel** when researching multiple topics.
 
 The doc-scanner will return:
@@ -97,18 +87,6 @@ After all doc-scanners complete:
 ### Step 4: Spawn Content-Retriever(s)
 
 For each selected section (up to 8), spawn a content-retriever:
-
-```
-Tool: Task
-subagent_type: general-purpose
-model: haiku
-prompt: |
-  Retrieve section: "[SECTION NAME]"
-  Document: .ai-docs/[DOC].md
-  Lines: [START]-[END]
-
-  Follow the instructions in .claude/agents/content-retriever.md
-```
 
 **Run multiple retrievers in parallel** when sections are independent.
 

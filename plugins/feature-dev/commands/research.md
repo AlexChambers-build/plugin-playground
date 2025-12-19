@@ -1,9 +1,6 @@
 ---
 description: Research any topic using the arbiter. Spawns an autonomous agent to search the .ai-docs knowledge base, read relevant sections, and return synthesized findings.
-arguments:
-  - name: topic
-    description: The topic, problem, or question to research
-    required: true
+argument-hint: [topic]
 ---
 
 # Research: $ARGUMENTS
