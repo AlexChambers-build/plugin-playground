@@ -149,20 +149,14 @@ Follow this systematic five-phase planning approach, getting user approval befor
 ### Phase 2: Codebase Exploration
 **Goal**: Understand existing code structure and patterns
 
-1. Use Task tool with subagent_type=Explore to:
-   - Identify similar features or patterns in the codebase
-   - Locate files that will need modification
-   - Understand current architecture and conventions
-   - Return a list of the most important files to review
-2. Read the key files identified by the exploration agent
-3. Document existing patterns, naming conventions, and architectural decisions
-4. Identify where the new feature fits into the current structure
-5. Capture to scratch-memory.md as you explore:
+1. Use the `/research` command to gather relevant information for this feature from the knowledge base
+2. Deeply understand the results from the `/research` command and Identify where the new feature fits into the current structure
+3. Capture to scratch-memory.md as you explore:
    - **Technical Patterns**: Architectural patterns found (e.g., "Middleware pattern in auth/", "Repository pattern for data access")
    - **Integration Points**: How systems connect (e.g., "API routes in routes/, handlers in handlers/")
    - **Gotchas & Constraints**: Limitations discovered (e.g., "Database schema requires migration", "Auth tokens expire after 1h")
    - **Questions & Unknowns**: Areas needing clarification (e.g., "How does error handling work across async boundaries?")
-6. Get explicit user confirmation before proceeding to Phase 3
+4. Get explicit user confirmation before proceeding to Phase 3
 
 ### Phase 3: Clarifying Questions
 **Goal**: Resolve all ambiguities before designing
