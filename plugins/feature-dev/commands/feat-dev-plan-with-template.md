@@ -19,7 +19,8 @@ FEATURE_DESCRIPTION: $1
 CONTEXT_FILES: $2, $3, $4, ...
 - Optional file paths (using @ prefix) that provide additional context
 - Used for: Enriching understanding of requirements and constraints
-- Example: @docs/architecture.md @requirements/auth-spec.md
+- Should be: Requirement documents, specifications, design docs (NOT code files)
+- Example: @docs/requirements.md @specs/auth-requirements.md @docs/user-stories.md
 
 PLAN_TEMPLATE: ./templates/feat-dev-plan/plan-template-minimal-v2.md
 - The template structure for generating plan.md
@@ -97,7 +98,9 @@ Throughout the planning process, continuously capture insights to SCRATCH_MEMORY
 Follow this systematic five-phase planning approach, getting user approval before moving to each subsequent phase:
 
 ### Phase 1: Discovery
-**Goal**: Understand what needs to be built
+**Goal**: Understand what needs to be built at a CONCEPTUAL level (NO codebase exploration)
+
+**IMPORTANT**: This phase focuses ONLY on gathering requirements and understanding the problem domain. Do NOT explore the codebase, read code files, or look at existing implementations. All codebase exploration happens in Phase 2.
 
 1. Create a comprehensive todo list tracking all five phases
 2. If FEATURE_DESCRIPTION is missing or unclear:
@@ -105,7 +108,10 @@ Follow this systematic five-phase planning approach, getting user approval befor
    - Ask user: What should the feature do?
    - Ask user: Any constraints or requirements?
    - Ask user: Expected user experience or behavior?
-3. Read any CONTEXT_FILES provided to gather additional requirements
+3. Read any CONTEXT_FILES provided ONLY if they are requirement/specification documents:
+   - Only read files that contain requirements, specifications, or design documents
+   - Do NOT read code files or explore the codebase
+   - If unsure about a file's purpose, ask the user if it's a requirement document
 4. Derive FEATURE_NAME from FEATURE_DESCRIPTION:
    - Convert to lowercase
    - Replace spaces with hyphens
@@ -140,33 +146,29 @@ Follow this systematic five-phase planning approach, getting user approval befor
    ## Reusable Solutions
    <!-- Patterns/approaches applicable to other features -->
    ```
-7. Capture initial domain concepts to scratch-memory.md:
-   - Domain terminology from FEATURE_DESCRIPTION
-   - Business rules or constraints mentioned
+7. Capture initial CONCEPTUAL domain knowledge to scratch-memory.md:
+   - Domain terminology from FEATURE_DESCRIPTION (NOT from code)
+   - Business rules or constraints mentioned in requirements
    - Initial assumptions about the problem space
+   - High-level functional requirements
 8. Summarize your understanding of the feature in clear terms, including:
-   - What will be built
+   - What will be built (conceptually)
    - The derived FEATURE_NAME
    - Where the plan will be saved (OUTPUT_DIR)
+   - Key requirements and constraints identified
 9. Get explicit user confirmation before proceeding to Phase 2
 
 ### Phase 2: Codebase Exploration
 **Goal**: Understand existing code structure and patterns
 
-1. Use Task tool with subagent_type=Explore to:
-   - Identify similar features or patterns in the codebase
-   - Locate files that will need modification
-   - Understand current architecture and conventions
-   - Return a list of the most important files to review
-2. Read the key files identified by the exploration agent
-3. Document existing patterns, naming conventions, and architectural decisions
-4. Identify where the new feature fits into the current structure
-5. Capture to scratch-memory.md as you explore:
+1. Use the `/research` command to gather relevant information for this feature from the knowledge base
+2. Deeply understand the results from the `/research` command and Identify where the new feature fits into the current structure
+3. Capture to scratch-memory.md as you explore:
    - **Technical Patterns**: Architectural patterns found (e.g., "Middleware pattern in auth/", "Repository pattern for data access")
    - **Integration Points**: How systems connect (e.g., "API routes in routes/, handlers in handlers/")
    - **Gotchas & Constraints**: Limitations discovered (e.g., "Database schema requires migration", "Auth tokens expire after 1h")
    - **Questions & Unknowns**: Areas needing clarification (e.g., "How does error handling work across async boundaries?")
-6. Get explicit user confirmation before proceeding to Phase 3
+4. Get explicit user confirmation before proceeding to Phase 3
 
 ### Phase 3: Clarifying Questions
 **Goal**: Resolve all ambiguities before designing
@@ -277,7 +279,7 @@ This phase is split into two sub-sections:
 ## Workflow
 
 1. **Initialize** - Create todo list with all 5 phases, mark Phase 1 as in_progress
-2. **Phase 1: Discovery** - Gather requirements, initialize scratch-memory.md, capture domain concepts → **WAIT FOR USER APPROVAL**
+2. **Phase 1: Discovery** - Gather requirements at CONCEPTUAL level (NO code exploration), initialize scratch-memory.md, capture domain concepts → **WAIT FOR USER APPROVAL**
 3. **Phase 2: Exploration** - Explore codebase, read key files, capture patterns & integrations → **WAIT FOR USER APPROVAL**
 4. **Phase 3: Clarification** - Ask questions, resolve ambiguities, capture decisions & rationale → **WAIT FOR USER APPROVAL**
 5. **Phase 4: Specification** - Design architecture (4a), create implementation tasks (4b), capture reusable solutions → **WAIT FOR USER APPROVAL**
@@ -290,22 +292,28 @@ After Phase 1 (Discovery):
 ## Phase 1 Complete: Discovery
 
 **Feature Understanding:**
-[Clear summary of what will be built]
+[Clear conceptual summary of what will be built]
 
-**Requirements:**
+**Requirements Gathered:**
 - [Requirement 1]
 - [Requirement 2]
 - ...
 
-**Constraints:**
+**Constraints Identified:**
 - [Constraint 1 if any]
 
-**Knowledge Captured:**
+**Expected User Experience:**
+[High-level description of how users will interact with the feature]
+
+**Knowledge Captured (Conceptual Only - No Code Exploration):**
 - Domain Concepts: [X items captured]
 - Assumptions: [X items captured]
+- High-level functional requirements: [X items captured]
 
 **Files Initialized:**
 - {OUTPUT_DIR}/scratch-memory.md (ready for continuous capture)
+
+**Important:** No codebase exploration was performed in this phase. All understanding is at the conceptual/requirements level.
 
 **Next Step:** Phase 2 - Codebase Exploration
 
