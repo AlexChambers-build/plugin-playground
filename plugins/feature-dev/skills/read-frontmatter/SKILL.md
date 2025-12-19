@@ -1,6 +1,6 @@
 ---
 name: read-frontmatter
-description: Read frontmatter metadata from .ai-docs documents without loading full content. Use when asked to scan documents for topics, check what sections are available, find documents by keywords, or discover content overview. Triggers on phrases like "what topics are in", "scan the frontmatter", "what sections does it have", "check if it contains", "what's the metadata".
+description: Read frontmatter metadata from .ai-docs documents without loading full content. Use when asked to scan documents for topics, check what sections are available, find documents by keywords, or discover content overview. Triggers on phrases like "read the frontmatter", "read frontmatter", "check the frontmatter", "show me the frontmatter", "get the frontmatter", "what topics are in", "scan the frontmatter", "what sections does it have", "check if it contains", "does it contain topics about", "tell me if it contains", "what's the metadata".
 allowed-tools: Bash, Read
 ---
 

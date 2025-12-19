@@ -1,6 +1,6 @@
 ---
 name: extract-segment
-description: Extract specific sections from .ai-docs documents using line numbers. Use when asked to read a specific section, get content from certain lines, extract a topic, or retrieve partial document content. Triggers on phrases like "read the section about", "extract lines", "get the content from", "show me the section on", "read the dependency injection section".
+description: Extract specific sections from .ai-docs documents using line numbers. Use when asked to read a specific section, get content from certain lines, extract a topic, or retrieve partial document content. Triggers on phrases like "read the section", "read the section about", "extract the section", "extract lines", "read lines", "get the content from", "get content from lines", "show me the section", "show me the section on", "show me lines", "what does the section say", "what's in the section", "read the dependency injection section".
 allowed-tools: Bash, Read
 ---
 
