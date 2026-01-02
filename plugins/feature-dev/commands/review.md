@@ -89,15 +89,29 @@ Domain breakdown:
 
 For each file:
 1. Read and analyze the code thoroughly
-2. Identify issues in: Security, Code Quality, Testing, Best Practices
+2. Identify issues in: Security, Code Quality, Testing, Best Practices, AI Slop
 3. Research relevant patterns from .ai-docs using Task tool
 4. Categorize findings by severity: CRITICAL/HIGH/MEDIUM/LOW
 5. Provide specific line numbers and actionable recommendations
 
+**AI Slop Detection:**
+Identify low-quality AI-generated code patterns:
+- Unnecessary comments that state the obvious (e.g., `// increment counter` above `counter++`)
+- Over-commenting where code is self-explanatory
+- Overly verbose or redundant comments restating the code
+- Premature abstractions (helpers/utilities for one-time operations)
+- Defensive over-engineering (error handling for impossible scenarios)
+- Excessive boilerplate or wrapper functions
+- Docstrings that just restate function signatures
+- Feature flags or configurability that will never be used
+- Overly complex solutions to simple problems
+Categorize AI slop as MEDIUM severity unless it significantly impacts maintainability
+
 Return a structured analysis with:
-- Executive summary (files reviewed, issue counts by severity, overall assessment)
+- Executive summary (files reviewed, issue counts by severity, overall assessment, AI slop count)
 - All findings organized by file and category
 - For each finding: severity, description, line number, recommendation, relevant pattern reference
+- Separate AI slop findings section with specific examples
 
 This is 'Warn & Continue' mode - provide thorough analysis without blocking."
 ```
@@ -190,6 +204,7 @@ See detailed findings below.
 - ⚠️  High: [count]
 - ⚙️  Medium: [count]
 - ℹ️  Low: [count]
+- 🤖 AI Slop: [count]
 
 **Key Findings**: [1-2 sentence summary from agent]
 
@@ -269,6 +284,20 @@ See detailed findings below.
 
 ---
 
+## AI Slop Detection
+
+[Agent's AI slop findings - unnecessary comments, over-engineering, premature abstractions]
+
+**Common AI Slop Patterns to Flag:**
+- Comments that just restate what the code does
+- Over-commented self-explanatory code
+- Premature abstractions for one-time use
+- Defensive error handling for impossible cases
+- Excessive boilerplate or wrapper layers
+- Overly complex solutions to simple problems
+
+---
+
 ## Best Practice Violations
 
 [Agent's best practice findings with .ai-docs references]
@@ -315,6 +344,7 @@ Show formatted summary in console:
 **High Priority Issues**: [count] ⚠️
 **Medium Issues**: [count]
 **Low Issues**: [count]
+**AI Slop Detected**: [count] 🤖
 
 **Status**: Changes must be made before proceeding
 [If REVIEW_ROUND > 1:]
@@ -340,6 +370,7 @@ Show formatted summary in console:
 **Issues Found**: [total]
 - Medium: [count]
 - Low: [count]
+- AI Slop: [count] 🤖
 
 **Status**: ✅ This change is approved
 [If REVIEW_ROUND > 1:]
@@ -507,5 +538,6 @@ feats/add-authentication/
 - **Non-Blocking**: Provides status but doesn't fail the build
 - **Actionable**: Agent provides specific recommendations with line numbers
 - **Research-Backed**: Agent uses .ai-docs patterns for best practice validation
+- **AI Slop Detection**: Identifies unnecessary comments, over-engineering, and premature abstractions typical of low-quality AI-generated code
 
 The command orchestrates the review workflow while the agent provides the expertise and analysis. Multiple review rounds track progress toward code quality standards.
