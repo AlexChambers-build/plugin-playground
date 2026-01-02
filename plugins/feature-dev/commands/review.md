@@ -106,23 +106,61 @@ This is 'Warn & Continue' mode - provide thorough analysis without blocking."
 
 After the agent completes and returns findings:
 
-**Determine report location:**
-- If FEATURE_DIR: `{FEATURE_DIR}/code-review.md`
-- Otherwise: `./code-review.md`
+**Determine report location with round tracking:**
+
+1. Determine base directory:
+   - If FEATURE_DIR: `{FEATURE_DIR}/`
+   - Otherwise: `./`
+
+2. Check for existing reviews and find next available filename:
+   ```bash
+   # Check if code-review.md exists
+   if [ -f "{base_dir}/code-review.md" ]; then
+     # Find next available round number
+     round=2
+     while [ -f "{base_dir}/code-review-round-${round}.md" ]; do
+       round=$((round + 1))
+     done
+     REVIEW_FILE="{base_dir}/code-review-round-${round}.md"
+     REVIEW_ROUND=${round}
+     PREVIOUS_REVIEW="{base_dir}/code-review-round-$((round - 1)).md"
+     if [ ! -f "$PREVIOUS_REVIEW" ]; then
+       PREVIOUS_REVIEW="{base_dir}/code-review.md"
+     fi
+   else
+     REVIEW_FILE="{base_dir}/code-review.md"
+     REVIEW_ROUND=1
+     PREVIOUS_REVIEW=""
+   fi
+   ```
+
+3. If REVIEW_ROUND > 1, optionally read PREVIOUS_REVIEW to understand what was fixed
 
 **Calculate approval status:**
 - If any CRITICAL issues: **CHANGES REQUIRED**
 - If any HIGH issues and no CRITICAL: **CHANGES REQUIRED**
 - If only MEDIUM/LOW or no issues: **APPROVED**
 
-**Use Write tool to create code-review.md:**
+**Use Write tool to create REVIEW_FILE:**
 
 ```markdown
-# Code Review Report
+# Code Review Report [If REVIEW_ROUND > 1: - Round {REVIEW_ROUND}]
 
 **Generated**: [current timestamp]
 **Reviewed By**: Code Reviewer Agent
 **Review Mode**: Warn & Continue
+[If REVIEW_ROUND > 1:]
+**Review Round**: {REVIEW_ROUND}
+**Previous Review**: {PREVIOUS_REVIEW}
+
+---
+
+[If REVIEW_ROUND > 1:]
+## 📋 Review History
+
+This is review round {REVIEW_ROUND}. Previous review(s):
+- Round {REVIEW_ROUND - 1}: {PREVIOUS_REVIEW} [If exists: - {status from file if readable}]
+[If REVIEW_ROUND > 2: - Round 1: code-review.md]
 
 ---
 
@@ -270,7 +308,7 @@ Show formatted summary in console:
 
 **If CHANGES REQUIRED:**
 ```
-## ⚠️  Code Review: CHANGES REQUIRED
+## ⚠️  Code Review [If REVIEW_ROUND > 1: Round {REVIEW_ROUND}]: CHANGES REQUIRED
 
 **Files Reviewed**: [count]
 **Critical Issues**: [count] 🚨
@@ -279,20 +317,24 @@ Show formatted summary in console:
 **Low Issues**: [count]
 
 **Status**: Changes must be made before proceeding
+[If REVIEW_ROUND > 1:]
+**Review Round**: {REVIEW_ROUND} (Previous: {PREVIOUS_REVIEW})
 
 **Top Issues to Address**:
 1. [First critical/high issue summary]
 2. [Second critical/high issue summary]
 3. [Third critical/high issue summary]
 
-**Report Location**: `[path]`
+**Report Location**: `{REVIEW_FILE}`
 
 ⚠️  Review the full report and address critical/high issues before deployment.
+[If REVIEW_ROUND > 1:]
+💡 Run /review-fix {REVIEW_FILE} to apply fixes
 ```
 
 **If APPROVED:**
 ```
-## ✅ Code Review: APPROVED
+## ✅ Code Review [If REVIEW_ROUND > 1: Round {REVIEW_ROUND}]: APPROVED
 
 **Files Reviewed**: [count]
 **Issues Found**: [total]
@@ -300,29 +342,37 @@ Show formatted summary in console:
 - Low: [count]
 
 **Status**: ✅ This change is approved
+[If REVIEW_ROUND > 1:]
+**Review Round**: {REVIEW_ROUND} [If REVIEW_ROUND == 2: (Improvements from previous review applied! 🎉)]
 
 No critical or high-severity issues found. Code meets quality standards.
 
 [If medium/low issues exist:]
 **Optional Improvements**: [count] medium/low priority suggestions available in report
 
-**Report Location**: `[path]`
+**Report Location**: `{REVIEW_FILE}`
 
 ✅ Ready to proceed with deployment or merge.
+[If REVIEW_ROUND > 1:]
+📊 Review progression: Round 1 → Round {REVIEW_ROUND} ✅
 ```
 
 **If NO issues at all:**
 ```
-## 🎉 Code Review: APPROVED
+## 🎉 Code Review [If REVIEW_ROUND > 1: Round {REVIEW_ROUND}]: APPROVED
 
 **Files Reviewed**: [count]
 **Issues Found**: 0
 
 **Status**: ✅ Excellent! No issues found.
+[If REVIEW_ROUND > 1:]
+**Review Round**: {REVIEW_ROUND} - Perfect! All previous issues resolved! 🎉
 
 The code looks great and meets all quality standards.
 
-**Report Location**: `[path]`
+**Report Location**: `{REVIEW_FILE}`
+[If REVIEW_ROUND > 1:]
+📊 Review progression: Round 1 → Round {REVIEW_ROUND} ✅ (Clean code!)
 ```
 
 ## Error Handling
@@ -373,7 +423,7 @@ Try again or review files manually.
 
 ## Integration with Workflow
 
-Standard feature development workflow:
+Standard feature development workflow with iterative reviews:
 
 ```bash
 # 1. Plan
@@ -382,19 +432,80 @@ Standard feature development workflow:
 # 2. Build
 /feat-plan-build feats/add-authentication
 
-# 3. Review (NEW)
+# 3. Review (Round 1)
 /review feats/add-authentication
+# → Creates: code-review.md
+# → Status: CHANGES REQUIRED (2 Critical, 6 High issues)
 
-# 4. If APPROVED: proceed
-# 5. If CHANGES REQUIRED: fix issues and re-review
+# 4. Fix issues (Round 1)
+/review-fix feats/add-authentication/code-review.md
+# → Creates: review-fix-plan.md, review-fix-report.md
+
+# 5. Review again (Round 2)
+/review feats/add-authentication
+# → Creates: code-review-round-2.md
+# → Status: CHANGES REQUIRED (1 High, 3 Medium issues remain)
+
+# 6. Fix remaining issues (Round 2)
+/review-fix feats/add-authentication/code-review-round-2.md
+
+# 7. Final review (Round 3)
+/review feats/add-authentication
+# → Creates: code-review-round-3.md
+# → Status: APPROVED ✅
+
+# 8. Proceed with deployment
 ```
+
+## Round Tracking System
+
+The review command automatically tracks multiple review rounds to maintain audit history:
+
+**File Naming Pattern:**
+- **Round 1**: `code-review.md` (initial review)
+- **Round 2**: `code-review-round-2.md` (after first fix cycle)
+- **Round 3**: `code-review-round-3.md` (after second fix cycle)
+- **Round N**: `code-review-round-N.md` (continues as needed)
+
+**How It Works:**
+1. First `/review` call creates `code-review.md`
+2. After fixes applied, next `/review` detects existing file
+3. Automatically creates `code-review-round-2.md` with history reference
+4. Each subsequent review increments the round number
+5. Previous reviews remain unchanged for comparison
+
+**Example Directory Structure After Multiple Rounds:**
+```
+feats/add-authentication/
+├── plan.md
+├── tasks.md
+├── scratch-memory.md
+├── development-report.md
+├── code-review.md              ← Round 1: CHANGES REQUIRED
+├── review-fix-plan.md           (fixes from round 1)
+├── review-fix-report.md
+├── code-review-round-2.md      ← Round 2: CHANGES REQUIRED
+├── review-fix-plan.md           (updated with round 2 fixes)
+├── review-fix-report.md         (updated)
+└── code-review-round-3.md      ← Round 3: APPROVED ✅
+```
+
+**Benefits:**
+- **Audit Trail**: Complete history of all review iterations
+- **Progress Tracking**: See improvement across rounds
+- **Comparison**: Compare issues found in different rounds
+- **Accountability**: Clear record of what was fixed when
+- **No Overwrites**: Previous reviews never lost
 
 ## Notes
 
 - **Approval-Based**: Clear APPROVED/CHANGES REQUIRED status at top of report
+- **Round Tracking**: Automatically creates versioned reviews (see above)
+- **Iterative Workflow**: Supports multiple review → fix → review cycles until approved
+- **History Preservation**: Each round's report is kept for audit trail and comparison
 - **Agent-Driven**: All analysis done by specialized code-reviewer agent
 - **Non-Blocking**: Provides status but doesn't fail the build
 - **Actionable**: Agent provides specific recommendations with line numbers
 - **Research-Backed**: Agent uses .ai-docs patterns for best practice validation
 
-The command orchestrates the review workflow while the agent provides the expertise and analysis.
+The command orchestrates the review workflow while the agent provides the expertise and analysis. Multiple review rounds track progress toward code quality standards.
