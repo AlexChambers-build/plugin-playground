@@ -493,6 +493,22 @@ Key outcomes:
 - Assess code quality objectively
 - Document all deviations with clear rationale
 
+**Optional Code Review:**
+
+After generating the development report, you can perform a comprehensive code review using the `/review` command:
+
+```bash
+/review {FEATURE_DIR}
+```
+
+This will spawn a code-reviewer agent that analyzes all changes for:
+- **Code Quality**: Complexity, maintainability, organization, naming conventions
+- **Security Vulnerabilities**: SQL injection, XSS, command injection, hardcoded secrets, missing authentication
+- **Test Coverage**: Missing tests, test quality, convention adherence
+- **Best Practice Violations**: Compares code against patterns in .ai-docs knowledge base
+
+The review generates a `code-review.md` report with severity-based findings (CRITICAL/HIGH/MEDIUM/LOW) and actionable recommendations. This is a non-blocking "Warn & Continue" mode that provides guidance without failing the build.
+
 ### Phase 5: Summary Display
 
 **CLI Output Protocol:**
