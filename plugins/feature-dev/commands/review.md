@@ -1,254 +1,400 @@
 ---
 description: Perform comprehensive code review of recent changes, analyzing quality, security, and test coverage
 argument-hint: "[feature-dir] [--files file1,file2,...]"
-Allowed-tools: Read, Task, Glob, Bash, TodoWrite
+Allowed-tools: Read, Task, Glob, Bash, TodoWrite, Write
 ---
 
 # Code Review: $ARGUMENTS
 
-Perform comprehensive code review analyzing code quality, security vulnerabilities, and test coverage.
+Orchestrate code review by spawning the code-reviewer agent and generating a report with clear approval status.
 
 ## Instructions
 
-You will conduct a thorough code review of files by spawning the code-reviewer agent.
+### Step 1: Parse Arguments and Identify Files
 
-### Step 1: Parse Arguments
+**Determine review mode from $ARGUMENTS:**
 
-Extract the review target from $ARGUMENTS:
-
-**Pattern 1: Feature Directory**
-```
+**Mode 1: Feature Directory**
+```bash
 /review feats/add-user-field
 ```
-- FEATURE_DIR = "feats/add-user-field"
-- Mode: Review files from development-report.md
+Extract FEATURE_DIR and find files from development-report.md
 
-**Pattern 2: Specific Files**
-```
+**Mode 2: Specific Files**
+```bash
 /review --files backend/src/auth.ts,frontend/src/Login.jsx
 ```
-- Mode: Review specified files
+Extract comma-separated file paths after --files flag
 
-**Pattern 3: No Arguments**
-```
+**Mode 3: Auto-detect**
+```bash
 /review
 ```
-- Mode: Find and review recently modified files
+Find recently modified files using git status
 
-### Step 2: Create Todo List
+**File Discovery Logic:**
 
-Use TodoWrite to create a simple progress tracker:
+If FEATURE_DIR provided:
+1. Check if `{FEATURE_DIR}/development-report.md` exists
+2. If exists, read it and extract file paths from "Files Created" and "Files Modified" sections
+3. If not exists, use `find {FEATURE_DIR} -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \)`
+
+If --files flag:
+1. Split comma-separated list: `file1,file2,file3` → `[file1, file2, file3]`
+2. Trim whitespace from each path
+
+If no arguments:
+1. Try git: `git status --short | grep -E '^(M|A)' | awk '{print $2}' | grep -E '\.(ts|tsx|js|jsx)$'`
+2. Fallback: `find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -mtime -7 | head -20`
+
+**Handle errors:**
+- If no files found: Display error and exit
+- If feature directory doesn't exist: Display error and exit
+
+### Step 2: Categorize Files by Domain
+
+For each file, determine domain based on path patterns:
+- Contains `backend/` or `server/` or `api/` or ends with `.controller.ts` or `.service.ts` → **backend**
+- Contains `frontend/` or `client/` or `ui/` or ends with `.jsx` or `.tsx` or `.vue` → **frontend**
+- Contains `__tests__/` or ends with `.test.` or `.spec.` → **test**
+- Matches `package.json`, `tsconfig.json`, `.eslintrc` → **config**
+- Everything else → **general**
+
+Build domain summary:
 ```
-[
-  { "content": "Identify files to review", "status": "in_progress", "activeForm": "Identifying files to review" },
-  { "content": "Spawn code-reviewer agent", "status": "pending", "activeForm": "Spawning code-reviewer agent" },
-  { "content": "Display review summary", "status": "pending", "activeForm": "Displaying review summary" }
-]
-```
-
-### Step 3: Determine Files to Review
-
-**If FEATURE_DIR provided:**
-1. Verify the directory exists
-2. Check for development-report.md file
-3. If found, read it to extract the list of created/modified files
-4. Pass the feature directory path to the agent
-
-**If --files provided:**
-1. Parse the comma-separated file list
-2. Verify each file exists (optional, agent will handle)
-3. Pass the file list to the agent
-
-**If no arguments:**
-1. Use Bash tool to find recently modified files:
-   ```bash
-   git status --short | grep -E '^(M|A)' | awk '{print $2}'
-   ```
-   or if not a git repo:
-   ```bash
-   find . -type f -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" | head -20
-   ```
-2. Pass the file list to the agent
-
-Mark the first todo as completed and move to next.
-
-### Step 4: Spawn Code-Reviewer Agent
-
-Use the Task tool to spawn the code-reviewer agent:
-
-**For feature directory:**
-```
-Task tool:
-  subagent_type: "feature-dev:code-reviewer"
-  description: "Review code changes"
-  prompt: "Review all code changes in the feature directory: [FEATURE_DIR]
-
-  The development-report.md file contains the list of files that were created or modified.
-
-  Analyze each file for:
-  - Code quality issues (complexity, maintainability, organization)
-  - Security vulnerabilities (injection risks, authentication issues, data exposure)
-  - Test coverage (missing tests, test quality, conventions)
-  - Best practice adherence (use /research to get patterns from .ai-docs)
-
-  Generate a comprehensive code-review.md report in the feature directory with severity levels:
-  - CRITICAL: Security vulnerabilities, data loss risks
-  - HIGH: Bugs, missing error handling, missing tests
-  - MEDIUM: Best practice violations, code complexity
-  - LOW: Style issues, minor improvements
-
-  This is 'Warn & Continue' mode - provide warnings and recommendations but don't block."
+Backend: [count] files
+Frontend: [count] files
+Test: [count] files
+Config: [count] files
+Other: [count] files
 ```
 
-**For specific files:**
+### Step 3: Spawn Code-Reviewer Agent
+
+Use Task tool to invoke the code-reviewer agent:
+
 ```
 Task tool:
   subagent_type: "feature-dev:code-reviewer"
-  description: "Review specific files"
-  prompt: "Review the following files: [comma-separated file list]
+  description: "Review code for quality, security, and testing"
+  prompt: "Review the following files for code quality, security vulnerabilities, testing coverage, and best practice adherence.
 
-  Analyze each file for:
-  - Code quality issues
-  - Security vulnerabilities
-  - Test coverage
-  - Best practice adherence
+Files to review:
+[List each file path, one per line]
 
-  Generate a code-review.md report with findings categorized by severity (CRITICAL/HIGH/MEDIUM/LOW).
+Domain breakdown:
+- Backend: [count] files
+- Frontend: [count] files
+- Test: [count] files
 
-  This is 'Warn & Continue' mode - provide warnings but don't block."
+For each file:
+1. Read and analyze the code thoroughly
+2. Identify issues in: Security, Code Quality, Testing, Best Practices
+3. Research relevant patterns from .ai-docs using Task tool
+4. Categorize findings by severity: CRITICAL/HIGH/MEDIUM/LOW
+5. Provide specific line numbers and actionable recommendations
+
+Return a structured analysis with:
+- Executive summary (files reviewed, issue counts by severity, overall assessment)
+- All findings organized by file and category
+- For each finding: severity, description, line number, recommendation, relevant pattern reference
+
+This is 'Warn & Continue' mode - provide thorough analysis without blocking."
 ```
 
-Mark the second todo as completed.
+### Step 4: Generate Report from Agent Output
 
-### Step 5: Display Review Summary
+After the agent completes and returns findings:
 
-After the agent completes:
+**Determine report location:**
+- If FEATURE_DIR: `{FEATURE_DIR}/code-review.md`
+- Otherwise: `./code-review.md`
 
-1. Read the generated code-review.md file to extract the executive summary
-2. Display a formatted summary to the user:
+**Calculate approval status:**
+- If any CRITICAL issues: **CHANGES REQUIRED**
+- If any HIGH issues and no CRITICAL: **CHANGES REQUIRED**
+- If only MEDIUM/LOW or no issues: **APPROVED**
+
+**Use Write tool to create code-review.md:**
 
 ```markdown
-## ✅ Code Review Complete
+# Code Review Report
 
-**Files Reviewed**: [count from report]
-**Issues Found**: [total]
+**Generated**: [current timestamp]
+**Reviewed By**: Code Reviewer Agent
+**Review Mode**: Warn & Continue
+
+---
+
+## 🔍 REVIEW STATUS: [APPROVED / CHANGES REQUIRED]
+
+[If APPROVED:]
+✅ **This change is APPROVED**
+
+No critical or high-severity issues found. The code meets quality standards and can proceed.
+
+[If CHANGES REQUIRED:]
+⚠️  **CHANGES REQUIRED**
+
+Critical or high-severity issues must be addressed before proceeding:
+- [Count] Critical issues
+- [Count] High-priority issues
+
+See detailed findings below.
+
+---
+
+## Executive Summary
+
+**Files Reviewed**: [count from agent output]
+**Total Issues**: [total from agent output]
 - 🚨 Critical: [count]
 - ⚠️  High: [count]
 - ⚙️  Medium: [count]
 - ℹ️  Low: [count]
 
-**Overall Status**: [PASS WITH WARNINGS / NEEDS ATTENTION / SERIOUS ISSUES FOUND]
+**Key Findings**: [1-2 sentence summary from agent]
 
-**Report Location**: `[path to code-review.md]`
+---
 
-### Key Findings:
-- [1-2 sentence summary from report]
+## Critical Issues
 
-### Next Steps:
-1. Review the full report: `[report path]`
-2. Address critical issues immediately
-3. Plan fixes for high-priority issues
-4. Schedule medium/low issues for future refactoring
+[If none: "None found. ✅"]
 
-[If critical or high issues found:]
-⚠️  **Action Required**: [count] critical/high severity issues need attention
+[For each critical issue from agent output:]
+### [File Path]
+**Line**: [line number from agent]
+**Issue**: [description from agent]
+**Risk**: [risk explanation from agent]
+**Recommendation**: [fix recommendation from agent]
+**Reference**: [.ai-docs reference if provided by agent]
+
+---
+
+## High Priority Issues
+
+[If none: "None found. ✅"]
+
+[For each high issue from agent output:]
+### [File Path]
+**Line**: [line number from agent]
+**Issue**: [description from agent]
+**Impact**: [impact explanation from agent]
+**Recommendation**: [fix recommendation from agent]
+
+---
+
+## Medium Priority Issues
+
+[For each medium issue from agent output:]
+### [File Path]
+**Line**: [line number from agent]
+**Issue**: [description from agent]
+**Recommendation**: [fix recommendation from agent]
+
+---
+
+## Low Priority Issues
+
+[For each low issue from agent output:]
+### [File Path]
+**Line**: [line number from agent]
+**Issue**: [description from agent]
+
+---
+
+## Review Summary by File
+
+[For each file reviewed, using agent output:]
+
+### 📄 `[file path]`
+**Domain**: [backend/frontend/test/config/general]
+**Issues Found**: [count from agent]
+- Critical: [count]
+- High: [count]
+- Medium: [count]
+- Low: [count]
+
+[Brief summary of main issues from agent]
+
+---
+
+## Security Analysis
+
+[Agent's security findings summary]
+
+---
+
+## Test Coverage Analysis
+
+[Agent's test coverage findings summary]
+
+---
+
+## Best Practice Violations
+
+[Agent's best practice findings with .ai-docs references]
+
+---
+
+## Recommendations
+
+### Immediate Actions Required
+[Agent's critical/high priority recommendations]
+
+### Should Address Soon
+[Agent's medium priority recommendations]
+
+### Future Improvements
+[Agent's low priority suggestions]
+
+---
+
+## Next Steps
+
+[If CHANGES REQUIRED:]
+1. ⚠️  Address all critical issues immediately
+2. ⚠️  Fix high-priority issues before deployment
+3. Schedule medium-priority fixes for upcoming sprint
+4. Consider low-priority improvements during refactoring
+
+[If APPROVED:]
+1. ✅ Code review passed - ready to proceed
+2. Consider addressing medium/low issues in future iterations
+3. Continue with deployment or merge process
 ```
 
-Mark the final todo as completed.
+### Step 5: Display Summary to User
 
-### Step 6: Provide Additional Guidance
+Show formatted summary in console:
 
-Based on the severity of issues found:
-
-**If CRITICAL issues found:**
+**If CHANGES REQUIRED:**
 ```
-🚨 **CRITICAL ISSUES DETECTED**
+## ⚠️  Code Review: CHANGES REQUIRED
 
-Security vulnerabilities or data loss risks were identified. Review these immediately before deployment:
-[List critical issues from report]
+**Files Reviewed**: [count]
+**Critical Issues**: [count] 🚨
+**High Priority Issues**: [count] ⚠️
+**Medium Issues**: [count]
+**Low Issues**: [count]
 
-Recommendation: Address these issues before proceeding with deployment.
+**Status**: Changes must be made before proceeding
+
+**Top Issues to Address**:
+1. [First critical/high issue summary]
+2. [Second critical/high issue summary]
+3. [Third critical/high issue summary]
+
+**Report Location**: `[path]`
+
+⚠️  Review the full report and address critical/high issues before deployment.
 ```
 
-**If only HIGH/MEDIUM/LOW issues:**
+**If APPROVED:**
 ```
-✅ No critical issues found.
+## ✅ Code Review: APPROVED
 
-Review the report for recommendations on code quality, testing, and best practices.
+**Files Reviewed**: [count]
+**Issues Found**: [total]
+- Medium: [count]
+- Low: [count]
+
+**Status**: ✅ This change is approved
+
+No critical or high-severity issues found. Code meets quality standards.
+
+[If medium/low issues exist:]
+**Optional Improvements**: [count] medium/low priority suggestions available in report
+
+**Report Location**: `[path]`
+
+✅ Ready to proceed with deployment or merge.
 ```
 
-**If NO issues found:**
+**If NO issues at all:**
 ```
-🎉 **Excellent!**
+## 🎉 Code Review: APPROVED
 
-No significant issues found. The code looks good!
+**Files Reviewed**: [count]
+**Issues Found**: 0
+
+**Status**: ✅ Excellent! No issues found.
+
+The code looks great and meets all quality standards.
+
+**Report Location**: `[path]`
+```
+
+## Error Handling
+
+**No files found:**
+```
+❌ No files to review.
+
+Usage:
+  /review [feature-dir]              # Review feature changes
+  /review --files file1.ts,file2.js  # Review specific files
+  /review                            # Auto-detect recent changes
+```
+
+**Feature directory not found:**
+```
+❌ Error: Feature directory not found: [path]
+
+Please verify the path or use:
+  /review --files file1,file2    # Review specific files
+  /review                        # Auto-detect changes
+```
+
+**Agent fails:**
+```
+❌ Code review failed
+
+The code-reviewer agent encountered an error. Please check:
+- File paths are valid and readable
+- Files contain valid code
+- Feature directory structure is correct
+
+Try again or review files manually.
 ```
 
 ## Example Usage
 
 ```bash
-# Review changes in a feature directory
+# Review feature directory
 /review feats/add-user-authentication
 
 # Review specific files
 /review --files backend/src/auth.ts,frontend/src/Login.tsx
 
-# Review recent changes (auto-detect)
+# Auto-detect changes
 /review
 ```
 
-## Output Files
+## Integration with Workflow
 
-- **code-review.md**: Comprehensive review report with all findings
-  - Located in feature directory if provided
-  - Located in current directory otherwise
-
-## Error Handling
-
-**If feature directory doesn't exist:**
-```
-Error: Feature directory not found: [path]
-
-Please verify the path or use --files to review specific files.
-```
-
-**If development-report.md not found:**
-```
-Warning: development-report.md not found in [feature-dir]
-
-Scanning directory for code files to review...
-```
-
-**If no files to review:**
-```
-No files found to review.
-
-Usage:
-  /review [feature-dir]           - Review feature changes
-  /review --files file1,file2     - Review specific files
-```
-
-## Integration with feat-plan-build
-
-After running `/feat-plan-build`, you can run `/review` to perform a comprehensive code review:
+Standard feature development workflow:
 
 ```bash
-# 1. Build the feature
-/feat-plan-build feats/add-user-field
+# 1. Plan
+/feat-dev-plan "Add authentication"
 
-# 2. Review the changes
-/review feats/add-user-field
+# 2. Build
+/feat-plan-build feats/add-authentication
 
-# 3. Address any critical/high issues found
-# 4. Re-run tests and validation
+# 3. Review (NEW)
+/review feats/add-authentication
+
+# 4. If APPROVED: proceed
+# 5. If CHANGES REQUIRED: fix issues and re-review
 ```
 
 ## Notes
 
-- **Non-Blocking**: This command provides warnings and recommendations but never blocks the build
-- **Severity-Based**: Issues are categorized as CRITICAL, HIGH, MEDIUM, or LOW
-- **Best Practices**: Integrates with .ai-docs knowledge base to check pattern adherence
-- **Actionable**: Provides specific recommendations with line numbers and code examples
-- **Comprehensive**: Covers code quality, security, testing, and best practices
+- **Approval-Based**: Clear APPROVED/CHANGES REQUIRED status at top of report
+- **Agent-Driven**: All analysis done by specialized code-reviewer agent
+- **Non-Blocking**: Provides status but doesn't fail the build
+- **Actionable**: Agent provides specific recommendations with line numbers
+- **Research-Backed**: Agent uses .ai-docs patterns for best practice validation
 
-The code-reviewer agent will use the `/research` command to fetch relevant best practices from the knowledge base and compare your code against documented patterns.
+The command orchestrates the review workflow while the agent provides the expertise and analysis.
