@@ -1,6 +1,6 @@
 {
   "name": "feature-dev",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Systematic feature development workflow with phased planning, specification, and implementation capabilities",
   "author": {
     "name": "Alex",
