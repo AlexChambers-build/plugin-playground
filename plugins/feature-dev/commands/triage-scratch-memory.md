@@ -8,6 +8,8 @@ Allowed-tools: Read, Task, Glob, Bash, TodoWrite, Write, Grep
 
 Extract valuable knowledge from scratch-memory.md files and promote it to the .ai-docs knowledge base.
 
+**Documentation Standard**: All promoted knowledge MUST follow the **AI-DOCS-FRONTMATTER-STANDARD.md** for proper metadata structure, comprehensive patterns[], and accurate sections[] with line numbers. This ensures optimal discoverability through the scoring algorithm.
+
 ## Variables
 
 **FEATURE_DIR**: $1 (optional)
@@ -181,6 +183,15 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
      description: "Extract knowledge from scratch-memory"
      prompt: "Extract valuable, reusable knowledge from the following scratch-memory file.
 
+   **CRITICAL**: Before starting, read the frontmatter standard at:
+   plugins/feature-dev/skills/AI-DOCS-FRONTMATTER-STANDARD.md
+
+   Follow this standard strictly for all metadata generation. Pay special attention to:
+   - Comprehensive patterns[] with ALL variations (exact match = +5 scoring)
+   - Exact domain enum values (general|backend|frontend|security|database|deployment|testing|architecture)
+   - keywords[] for supplementary search terms
+   - sections[] with exact line numbers (verify with Read tool)
+
    **Scratch Memory File**: [file path]
    **Quality Threshold**: [high/medium/low]
    **Existing .ai-docs Files**: [list from glob]
@@ -200,15 +211,22 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    - Abstract project-specific details to general principles
    - Determine target .ai-docs document (existing or new)
    - Format with proper structure
+   - **CRITICAL**: For patterns[] field, include ALL variations and related terms
+     - Example: authentication → [authentication, auth, jwt, json-web-tokens, oauth]
+     - This is critical for the scoring algorithm (exact match = +5 points)
 
    Apply the quality threshold: only promote items that meet the '[threshold]' standard.
 
    Return a structured extraction summary with:
-   - All patterns extracted
+   - All patterns extracted WITH comprehensive variation lists
    - Target documents for each pattern
    - Items not promoted (with reasons)
    - Recommendations for document updates
-   - Frontmatter updates required
+   - Frontmatter updates required (following AI-DOCS-FRONTMATTER-STANDARD.md)
+     - Comprehensive patterns[] with all variations
+     - keywords[] for supplementary terms
+     - sections[] with exact line numbers
+     - Correct domain enum values
 
    This is for the feature-dev plugin knowledge base."
    ```
@@ -285,45 +303,75 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    - Insert formatted pattern content
    - Maintain document flow and organization
 
-3. **Update Frontmatter**
+3. **Update Frontmatter** (Following AI-DOCS-FRONTMATTER-STANDARD.md)
    For each modified document:
    ```yaml
-   # Add new patterns to patterns list
+   # Add new patterns to patterns list (COMPREHENSIVE - include ALL variations)
    patterns:
      # ... existing patterns ...
      - new-pattern-name
+     - pattern-variation-1
+     - pattern-variation-2
+     - related-technology-name
 
-   # Update sections array with new line numbers
+   # Add keywords if applicable (lowercase supplementary terms)
+   keywords:
+     # ... existing keywords ...
+     - abbreviation
+     - synonym
+
+   # Update sections array with EXACT line numbers (verify with Read tool)
    sections:
      - name: "New Pattern Name"
        line_start: N
        line_end: M
-       summary: "Brief summary"
+       summary: "Descriptive summary with searchable terms, mention code if present"
 
    # Update last_updated
    last_updated: YYYY-MM-DD
 
    # Recalculate line_count
    line_count: N
+
+   # Add related documents if cross-references exist
+   related:
+     - related-doc.md
    ```
 
+   **Validation Checklist**:
+   - ✅ patterns[] includes all variations and related terms (for +5 scoring)
+   - ✅ domain uses exact enum value (general|backend|frontend|security|database|deployment|testing|architecture)
+   - ✅ sections[] line numbers verified with Read tool
+   - ✅ sections[] summaries include searchable terms
+   - ✅ complexity is basic|intermediate|advanced
+   - ✅ line_count matches `wc -l` output
+
 4. **Create New Documents** (if recommended)
+   Follow AI-DOCS-FRONTMATTER-STANDARD.md structure:
    ```markdown
    ---
-   domain: [general/backend/frontend/security]
+   domain: [general|backend|frontend|security|database|deployment|testing|architecture]
    title: "[Document Title]"
-   description: "[Description of patterns covered]"
+   description: "[1-2 sentences mentioning key patterns]"
    patterns:
      - pattern-one
+     - pattern-one-variation
      - pattern-two
+     - pattern-two-variation
+     - related-technology
+   keywords:
+     - lowercase-term
+     - abbreviation
    sections:
      - name: "[Pattern Name]"
        line_start: N
        line_end: M
-       summary: "[Summary]"
-   complexity: [basic/intermediate/advanced]
+       summary: "[Descriptive with searchable terms, mention code if present]"
+   complexity: [basic|intermediate|advanced]
    line_count: N
    last_updated: YYYY-MM-DD
+   related:
+     - related-doc.md
    ---
 
    # [Document Title]
@@ -333,6 +381,8 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
 
    [Pattern sections follow]
    ```
+
+   **IMPORTANT**: Ensure comprehensive patterns[] list with all variations for optimal discovery
 
 5. **Track All Changes**
    Keep detailed log of:
@@ -700,3 +750,9 @@ Complete feature development lifecycle:
 - **Quality first**: Default "high" threshold ensures only valuable patterns are promoted
 - **Preservation**: Original scratch-memory content kept for reference
 - **Integration**: Promoted patterns immediately available to /research and /explore
+- **Frontmatter Compliance**: All updates strictly follow AI-DOCS-FRONTMATTER-STANDARD.md:
+  - Comprehensive patterns[] with ALL variations (critical for +5 exact match scoring)
+  - Exact line numbers for sections[] (verified with Read tool)
+  - Correct domain enum values
+  - keywords[] for supplementary search terms
+  - This ensures maximum discoverability and proper knowledge retrieval

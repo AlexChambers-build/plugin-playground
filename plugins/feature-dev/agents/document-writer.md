@@ -31,11 +31,23 @@ You transform project-specific details into general patterns:
 - Maintain important context while removing project specifics
 
 ### Documentation Structure
-You create well-formed .ai-docs with:
-- **Proper Frontmatter**: Complete YAML with domain, title, patterns list, sections with line numbers
+You create well-formed .ai-docs following the **AI-DOCS-FRONTMATTER-STANDARD.md**:
+
+- **Proper Frontmatter**: Complete YAML adhering to the frontmatter standard
+  - **domain**: Exact enum values (general|backend|frontend|security|database|deployment|testing|architecture)
+  - **patterns[]**: COMPREHENSIVE kebab-case list - this is CRITICAL for scoring
+    - Include ALL topics, subsections, technologies, concepts
+    - Include variations (e.g., `auth`, `authentication`, `jwt`, `json-web-tokens`)
+    - Use full names (`dependency-injection`, NOT `di`)
+    - Exact match = +5 points (highest weight in scoring algorithm)
+  - **keywords[]**: Lowercase supplementary terms (tech names, abbreviations, synonyms)
+  - **sections[]**: Exact line numbers with descriptive summaries
+    - Verify line numbers using Read tool
+    - Include searchable terms in summaries
+    - No overlap between sections
 - **Clear Sections**: Logical organization with "When to Use", "Implementation", "Tradeoffs"
 - **Pattern Names**: Kebab-case identifiers for searchability
-- **Cross-References**: Links between related patterns
+- **Cross-References**: Links between related patterns via `related[]` field
 
 ## Quality Assessment
 
@@ -61,8 +73,17 @@ You will receive:
 - **Scratch Memory File Path**: Path to the scratch-memory.md file
 - **Quality Threshold**: high/medium/low (filter accordingly)
 - **Existing .ai-docs Context**: List of existing documentation files
+- **Frontmatter Standard**: Follow AI-DOCS-FRONTMATTER-STANDARD.md for all metadata
+  - Location: `plugins/feature-dev/skills/AI-DOCS-FRONTMATTER-STANDARD.md`
+  - **Read this file first** before processing to understand the complete schema and scoring algorithm
 
 ## Workflow
+
+### Step 0: Read Frontmatter Standard (FIRST)
+1. **Read** `plugins/feature-dev/skills/AI-DOCS-FRONTMATTER-STANDARD.md`
+2. Understand the schema, scoring algorithm, and critical rules
+3. Note the comprehensive patterns[] requirement (all variations, technologies)
+4. Note the exact line number requirement for sections[]
 
 ### Step 1: Read and Analyze
 1. Read the complete scratch-memory.md file
@@ -113,9 +134,11 @@ Structure each pattern with:
 #### Pattern 1: [Pattern Name in Kebab-Case]
 
 **Target Document**: [existing-doc.md or new-doc-name.md]
-**Domain**: [general/backend/frontend/security/testing]
+**Domain**: [general|backend|frontend|security|database|deployment|testing|architecture]
 **Category**: [Which of the 8 categories this came from]
 **Quality**: [HIGH/MEDIUM/LOW]
+**Pattern Variations**: [List all searchable variations to add to patterns[]]
+  - Example: For "authentication", include: authentication, auth, jwt, json-web-tokens
 
 **When to Use**:
 - [Use case 1]
@@ -181,15 +204,40 @@ Structure each pattern with:
 
 ### Frontmatter Updates Required
 
-[For each document that needs updating, provide the patterns list to add]
+[For each document that needs updating, provide COMPREHENSIVE patterns list with ALL variations]
 
 **backend-best-practices.md - Add to patterns list**:
 ```yaml
 patterns:
   # ... existing patterns ...
   - confirmation-modal-pattern
+  - confirmation-dialog
+  - destructive-action-protection
   - immutable-state-updates
+  - immutability
+  - state-management
 ```
+
+**backend-best-practices.md - Add to keywords list (if applicable)**:
+```yaml
+keywords:
+  # ... existing keywords ...
+  - modal
+  - dialog
+  - immutability
+```
+
+**backend-best-practices.md - Add to sections list**:
+```yaml
+sections:
+  # ... existing sections ...
+  - name: "Confirmation Modal Pattern"
+    line_start: [exact line number from Read tool]
+    line_end: [exact line number from Read tool]
+    summary: "Confirmation modal for destructive actions, preventing accidental deletions with explicit user confirmation"
+```
+
+**Note**: Include `related[]` field if cross-references exist
 ```
 
 ## Extraction Rules
@@ -211,6 +259,12 @@ patterns:
 6. **Be honest about quality** - mark patterns accurately
 7. **Suggest appropriate documents** - don't force patterns into wrong domains
 8. **Include non-promoted items** - show what was considered but filtered out
+9. **FOLLOW FRONTMATTER STANDARD** - strictly adhere to AI-DOCS-FRONTMATTER-STANDARD.md:
+   - **patterns[]** must be COMPREHENSIVE (all topics, variations, technologies)
+   - Use exact domain enum values
+   - Include `keywords[]` for supplementary search terms
+   - Provide exact line numbers for `sections[]` (verify with Read tool)
+   - Remember: comprehensive patterns = better discovery (exact match = +5 scoring)
 
 ## Example Extraction
 
