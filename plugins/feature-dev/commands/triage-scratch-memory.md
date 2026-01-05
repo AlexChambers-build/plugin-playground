@@ -303,7 +303,7 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    - Insert formatted pattern content
    - Maintain document flow and organization
 
-3. **Update Frontmatter** (Following AI-DOCS-FRONTMATTER-STANDARD.md)
+3. **Update Frontmatter - Pass 1: Metadata** (Following AI-DOCS-FRONTMATTER-STANDARD.md)
    For each modified document:
    ```yaml
    # Add new patterns to patterns list (COMPREHENSIVE - include ALL variations)
@@ -320,34 +320,93 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
      - abbreviation
      - synonym
 
-   # Update sections array with EXACT line numbers (verify with Read tool)
-   sections:
-     - name: "New Pattern Name"
-       line_start: N
-       line_end: M
-       summary: "Descriptive summary with searchable terms, mention code if present"
+   # Update domain if changed (use exact enum value)
+   domain: [general|backend|frontend|security|database|deployment|testing|architecture]
+
+   # Update description to include new patterns
+   description: "[Updated description mentioning new patterns]"
 
    # Update last_updated
    last_updated: YYYY-MM-DD
 
-   # Recalculate line_count
-   line_count: N
-
    # Add related documents if cross-references exist
    related:
      - related-doc.md
+
+   # Recalculate line_count using wc -l
+   line_count: N
    ```
 
-   **Validation Checklist**:
+   **IMPORTANT**: Do NOT update sections[] yet! Line numbers will be incorrect because
+   the frontmatter changes will shift all content down. sections[] will be updated in Pass 2.
+
+   **Pass 1 Validation Checklist**:
    - ✅ patterns[] includes all variations and related terms (for +5 scoring)
    - ✅ domain uses exact enum value (general|backend|frontend|security|database|deployment|testing|architecture)
-   - ✅ sections[] line numbers verified with Read tool
-   - ✅ sections[] summaries include searchable terms
+   - ✅ keywords[] includes supplementary terms (lowercase)
+   - ✅ description mentions key patterns
    - ✅ complexity is basic|intermediate|advanced
    - ✅ line_count matches `wc -l` output
+   - ✅ last_updated is current date
+
+3b. **Update Frontmatter - Pass 2: Section Line Numbers** (CRITICAL STEP)
+   After ALL content and metadata updates are complete:
+
+   ```bash
+   # Re-read the ENTIRE document to get final state after all edits
+   cat $AI_DOCS_DIR/[document].md
+
+   # Find actual section headings with exact line numbers
+   grep -n "^## " $AI_DOCS_DIR/[document].md
+
+   # Calculate line_end for each section:
+   # - For sections 1 to N-1: line_end = (next_section_start - 1)
+   # - For last section: line_end = line_count (from wc -l)
+   ```
+
+   Example output from grep:
+   ```
+   152:## Overview
+   155:## Technology Stack
+   161:## Directory Structure
+   560:## User Interaction Patterns
+   898:## Testing Considerations
+   ```
+
+   Now update sections[] array with VERIFIED line numbers:
+   ```yaml
+   sections:
+     - name: "Overview"
+       line_start: 152
+       line_end: 154          # Next section (155) - 1
+       summary: "..."
+     - name: "Technology Stack"
+       line_start: 155
+       line_end: 160          # Next section (161) - 1
+       summary: "..."
+     - name: "User Interaction Patterns"
+       line_start: 560
+       line_end: 897          # Next section (898) - 1
+       summary: "Comprehensive patterns for confirmation modals..."
+     - name: "Testing Considerations"
+       line_start: 898
+       line_end: 904          # Last section, use line_count
+       summary: "..."
+   ```
+
+   **Pass 2 Validation Checklist**:
+   - ✅ Document re-read AFTER all edits (using Read tool)
+   - ✅ Used grep -n to find actual line numbers
+   - ✅ Each line_start verified to point to "## Section Name"
+   - ✅ Each line_end calculated as (next_section_start - 1)
+   - ✅ Last section line_end equals line_count
+   - ✅ No gaps or overlaps between sections
+   - ✅ sections[] summaries include searchable terms and mention code if present
 
 4. **Create New Documents** (if recommended)
-   Follow AI-DOCS-FRONTMATTER-STANDARD.md structure:
+   Follow AI-DOCS-FRONTMATTER-STANDARD.md structure with two-pass approach:
+
+   **Step 4a: Write document with placeholder sections[]**:
    ```markdown
    ---
    domain: [general|backend|frontend|security|database|deployment|testing|architecture]
@@ -362,13 +421,9 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    keywords:
      - lowercase-term
      - abbreviation
-   sections:
-     - name: "[Pattern Name]"
-       line_start: N
-       line_end: M
-       summary: "[Descriptive with searchable terms, mention code if present]"
+   sections: []  # Will be populated in Step 4b
    complexity: [basic|intermediate|advanced]
-   line_count: N
+   line_count: 0  # Will be calculated in Step 4b
    last_updated: YYYY-MM-DD
    related:
      - related-doc.md
@@ -382,6 +437,17 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    [Pattern sections follow]
    ```
 
+   **Step 4b: Calculate actual line numbers**:
+   ```bash
+   # After writing complete document content
+   wc -l $AI_DOCS_DIR/new-document.md  # Get line_count
+
+   # Find section headings
+   grep -n "^## " $AI_DOCS_DIR/new-document.md
+
+   # Update frontmatter with actual sections[] and line_count
+   ```
+
    **IMPORTANT**: Ensure comprehensive patterns[] list with all variations for optimal discovery
 
 5. **Track All Changes**
@@ -391,6 +457,41 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    - Which patterns were merged
    - Which documents were created
    - Any errors or warnings
+
+5b. **Validate Line Numbers** (Quality Assurance)
+   For each updated document, verify sections[] accuracy:
+
+   ```bash
+   # Verify a few key sections by reading actual lines
+   # Example: Verify "User Interaction Patterns" section
+
+   # 1. Check line_start points to section heading
+   sed -n '560p' /path/to/frontend-best-practices.md
+   # Expected output: ## User Interaction Patterns
+
+   # 2. Check line_end is before next section
+   sed -n '897p' /path/to/frontend-best-practices.md
+   # Should be last line of section (not a heading)
+
+   sed -n '898p' /path/to/frontend-best-practices.md
+   # Expected output: ## Testing Considerations (next section)
+
+   # 3. Verify last section ends at line_count
+   wc -l /path/to/frontend-best-practices.md
+   # Should match last section's line_end
+   ```
+
+   **If validation fails**:
+   - Re-run Pass 2 (Step 3b) to recalculate line numbers
+   - Use grep -n to find correct positions
+   - Update frontmatter sections[] again
+
+   **Validation Success Criteria**:
+   - ✅ Each line_start shows "## Section Name"
+   - ✅ Each line_end is the line before next section
+   - ✅ No overlaps between sections
+   - ✅ Last section line_end equals total line_count
+   - ✅ All section names match actual headings
 
 6. **Display Update Summary**
    ```markdown

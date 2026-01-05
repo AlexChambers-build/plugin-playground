@@ -204,6 +204,17 @@ Structure each pattern with:
 
 ### Frontmatter Updates Required
 
+**IMPORTANT**: The orchestrating command uses a two-pass approach for frontmatter updates:
+- **Pass 1**: You provide patterns[], keywords[], domain, description, and related[]
+- **Pass 2**: The orchestrator calculates sections[] line numbers AFTER all edits are complete
+
+This ensures line numbers are accurate, accounting for frontmatter growth that shifts content down.
+
+**Your responsibility**: Provide comprehensive metadata and section descriptions. The orchestrator
+will handle exact line number calculation using grep after all content is finalized.
+
+---
+
 [For each document that needs updating, provide COMPREHENSIVE patterns list with ALL variations]
 
 **backend-best-practices.md - Add to patterns list**:
@@ -227,17 +238,16 @@ keywords:
   - immutability
 ```
 
-**backend-best-practices.md - Add to sections list**:
-```yaml
-sections:
-  # ... existing sections ...
-  - name: "Confirmation Modal Pattern"
-    line_start: [exact line number from Read tool]
-    line_end: [exact line number from Read tool]
-    summary: "Confirmation modal for destructive actions, preventing accidental deletions with explicit user confirmation"
-```
+**backend-best-practices.md - Sections to add** (line numbers TBD by orchestrator):
+- **Section Name**: "Confirmation Modal Pattern"
+- **Summary**: "Confirmation modal for destructive actions, preventing accidental deletions with explicit user confirmation, includes code examples"
+- **Action**: INSERT NEW SECTION (or MERGE WITH EXISTING if similar pattern exists)
 
-**Note**: Include `related[]` field if cross-references exist
+**backend-best-practices.md - Related documents** (if cross-references exist):
+```yaml
+related:
+  - frontend-best-practices.md
+```
 ```
 
 ## Extraction Rules
@@ -263,7 +273,8 @@ sections:
    - **patterns[]** must be COMPREHENSIVE (all topics, variations, technologies)
    - Use exact domain enum values
    - Include `keywords[]` for supplementary search terms
-   - Provide exact line numbers for `sections[]` (verify with Read tool)
+   - Provide section summaries with searchable terms (mention code if present)
+   - **Note**: Line numbers for sections[] will be calculated by the orchestrator in Pass 2
    - Remember: comprehensive patterns = better discovery (exact match = +5 scoring)
 
 ## Example Extraction
