@@ -12,23 +12,69 @@ Orchestrate code review by spawning the code-reviewer agent and generating a rep
 
 ### Step 1: Parse Arguments and Identify Files
 
-**Determine review mode from $ARGUMENTS:**
+**Extract flags from $ARGUMENTS:**
+
+First, check for optional flags and store them as variables:
+- `--include-all`: If present, set INCLUDE_ALL=true and skip interactive issue selection
+- `--clear-exclusions`: If present, set CLEAR_EXCLUSIONS=true and delete `.review-exclusions.json` if it exists
+
+After extracting flags, remove them from $ARGUMENTS before processing file discovery.
+
+Example parsing logic:
+```bash
+INCLUDE_ALL=false
+CLEAR_EXCLUSIONS=false
+ARGS="$ARGUMENTS"
+
+# Check for --include-all
+if [[ "$ARGS" == *"--include-all"* ]]; then
+  INCLUDE_ALL=true
+  ARGS="${ARGS//--include-all/}"
+fi
+
+# Check for --clear-exclusions
+if [[ "$ARGS" == *"--clear-exclusions"* ]]; then
+  CLEAR_EXCLUSIONS=true
+  ARGS="${ARGS//--clear-exclusions/}"
+fi
+
+# Trim whitespace
+ARGS="$(echo "$ARGS" | xargs)"
+```
+
+**Handle --clear-exclusions flag:**
+
+If CLEAR_EXCLUSIONS=true and FEATURE_DIR is determined (or use current directory):
+```bash
+if [ "$CLEAR_EXCLUSIONS" = true ]; then
+  EXCLUSION_FILE="${FEATURE_DIR:-.}/.review-exclusions.json"
+  if [ -f "$EXCLUSION_FILE" ]; then
+    rm "$EXCLUSION_FILE"
+    echo "✓ Cleared exclusions from previous reviews"
+  fi
+fi
+```
+
+**Determine review mode from remaining arguments:**
 
 **Mode 1: Feature Directory**
 ```bash
 /review feats/add-user-field
+/review feats/add-user-field --include-all
 ```
 Extract FEATURE_DIR and find files from development-report.md
 
 **Mode 2: Specific Files**
 ```bash
 /review --files backend/src/auth.ts,frontend/src/Login.jsx
+/review --files backend/src/auth.ts,frontend/src/Login.jsx --include-all
 ```
 Extract comma-separated file paths after --files flag
 
 **Mode 3: Auto-detect**
 ```bash
 /review
+/review --include-all
 ```
 Find recently modified files using git status
 
@@ -116,9 +162,130 @@ Return a structured analysis with:
 This is 'Warn & Continue' mode - provide thorough analysis without blocking."
 ```
 
+### Step 3.5: Interactive Issue Selection
+
+After the code-reviewer agent returns findings, before generating the report:
+
+**1. Parse agent output to extract all issues**
+
+Parse the agent's response to identify all issues with the following structure:
+```javascript
+{
+  "file": "path/to/file.ts",
+  "line": 45,
+  "severity": "HIGH" | "MEDIUM" | "LOW" | "CRITICAL",
+  "issue": "Brief description",
+  "description": "Full description",
+  "recommendation": "How to fix"
+}
+```
+
+**2. Load existing exclusions**
+
+Read `.review-exclusions.json` from the feature directory (or current directory):
+```bash
+EXCLUSION_FILE="${FEATURE_DIR:-.}/.review-exclusions.json"
+
+if [ -f "$EXCLUSION_FILE" ]; then
+  # Load existing exclusions
+  EXISTING_EXCLUSIONS=$(cat "$EXCLUSION_FILE")
+else
+  EXISTING_EXCLUSIONS='{"version":"1.0","exclusions":[]}'
+fi
+```
+
+**3. Generate issue IDs and filter excluded issues**
+
+For each issue, generate a stable ID using hash of:
+- File path
+- Line number (with ±3 line fuzzy matching tolerance)
+- Issue description (first 50 chars)
+
+Filter out issues that match existing exclusions (by ID with fuzzy line matching).
+
+**4. Check if interactive selection is needed**
+
+Skip interactive selection if:
+- `INCLUDE_ALL=true` flag is set
+- No issues remaining after filtering exclusions
+- Agent found 0 issues
+
+**5. Separate CRITICAL issues (auto-include)**
+
+CRITICAL severity issues are NEVER presented for selection - they are automatically included in the report.
+
+**6. Present issues for user selection using AskUserQuestion**
+
+For remaining issues (HIGH, MEDIUM, LOW), batch by severity and present using AskUserQuestion with `multiSelect: true`:
+
+**Example for HIGH severity:**
+```javascript
+AskUserQuestion tool:
+{
+  "questions": [
+    {
+      "question": "Select HIGH priority issues to include in the report (2 issues found):",
+      "header": "HIGH Issues",
+      "multiSelect": true,
+      "options": [
+        {
+          "label": "backend/auth.ts:45 - Missing error handling",
+          "description": "Function lacks try-catch for database operations"
+        },
+        {
+          "label": "frontend/Login.jsx:23 - Security vulnerability",
+          "description": "Password exposed in client-side logs"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Present in order:** HIGH → MEDIUM → LOW (separate question for each severity level that has issues)
+
+**7. Process user selections**
+
+For each severity level:
+- Issues selected by user: Include in report
+- Issues NOT selected: Add to exclusions
+
+**8. Save updated exclusions**
+
+For each excluded issue, generate exclusion entry:
+```json
+{
+  "id": "hash-of-issue",
+  "file": "path/to/file.ts",
+  "line": 45,
+  "severity": "MEDIUM",
+  "issue": "Brief description",
+  "reason": "User marked as non-issue",
+  "excludedAt": "2026-01-05T10:30:00Z",
+  "excludedInRound": 2
+}
+```
+
+Write updated exclusions back to `.review-exclusions.json` using Write tool.
+
+**9. Build final issue list**
+
+Combine:
+- All CRITICAL issues (auto-included)
+- User-selected HIGH/MEDIUM/LOW issues
+
+This filtered list will be used for report generation in Step 4.
+
+Store both:
+- `INCLUDED_ISSUES`: Issues to include in main report sections
+- `EXCLUDED_ISSUES`: Issues excluded in this round (for summary section)
+
 ### Step 4: Generate Report from Agent Output
 
-After the agent completes and returns findings:
+After the agent completes and returns findings (and after Step 3.5 interactive selection):
+
+**IMPORTANT**: Use `INCLUDED_ISSUES` from Step 3.5 for all report sections (Critical, High, Medium, Low).
+The `EXCLUDED_ISSUES` list should only appear in the summary section.
 
 **Determine report location with round tracking:**
 
@@ -150,10 +317,12 @@ After the agent completes and returns findings:
 
 3. If REVIEW_ROUND > 1, optionally read PREVIOUS_REVIEW to understand what was fixed
 
-**Calculate approval status:**
-- If any CRITICAL issues: **CHANGES REQUIRED**
-- If any HIGH issues and no CRITICAL: **CHANGES REQUIRED**
-- If only MEDIUM/LOW or no issues: **APPROVED**
+**Calculate approval status (based on INCLUDED_ISSUES only):**
+- If any CRITICAL issues in INCLUDED_ISSUES: **CHANGES REQUIRED**
+- If any HIGH issues in INCLUDED_ISSUES and no CRITICAL: **CHANGES REQUIRED**
+- If only MEDIUM/LOW or no issues in INCLUDED_ISSUES: **APPROVED**
+
+Note: Excluded issues do NOT affect approval status. Only issues the user selected for inclusion determine whether changes are required.
 
 **Use Write tool to create REVIEW_FILE:**
 
@@ -199,22 +368,53 @@ See detailed findings below.
 ## Executive Summary
 
 **Files Reviewed**: [count from agent output]
-**Total Issues**: [total from agent output]
-- 🚨 Critical: [count]
-- ⚠️  High: [count]
-- ⚙️  Medium: [count]
-- ℹ️  Low: [count]
-- 🤖 AI Slop: [count]
+**Total Issues Found**: [count from INCLUDED_ISSUES]
+- 🚨 Critical: [count from INCLUDED_ISSUES]
+- ⚠️  High: [count from INCLUDED_ISSUES]
+- ⚙️  Medium: [count from INCLUDED_ISSUES]
+- ℹ️  Low: [count from INCLUDED_ISSUES]
+- 🤖 AI Slop: [count from INCLUDED_ISSUES]
 
-**Key Findings**: [1-2 sentence summary from agent]
+[If EXCLUDED_ISSUES is not empty:]
+**Excluded from Report**: [count from EXCLUDED_ISSUES] issues (see Excluded Issues section below)
+
+**Key Findings**: [1-2 sentence summary from agent based on INCLUDED_ISSUES]
+
+---
+
+[If EXCLUDED_ISSUES is not empty:]
+## Excluded Issues
+
+The following issues were reviewed but excluded from this report by user selection:
+
+[Group by severity level]
+
+[If HIGH severity exclusions exist:]
+**HIGH Priority ([count] excluded):**
+[For each excluded HIGH issue:]
+- `[file path]:[line]` - [issue title/brief description]
+
+[If MEDIUM severity exclusions exist:]
+**MEDIUM Priority ([count] excluded):**
+[For each excluded MEDIUM issue:]
+- `[file path]:[line]` - [issue title/brief description]
+
+[If LOW severity exclusions exist:]
+**LOW Priority ([count] excluded):**
+[For each excluded LOW issue:]
+- `[file path]:[line]` - [issue title/brief description]
+
+Full details of all exclusions are stored in `.review-exclusions.json`
+
+To include all issues in a future review, use: `/review [feature-dir] --include-all`
 
 ---
 
 ## Critical Issues
 
-[If none: "None found. ✅"]
+[If none in INCLUDED_ISSUES: "None found. ✅"]
 
-[For each critical issue from agent output:]
+[For each critical issue from INCLUDED_ISSUES:]
 ### [File Path]
 **Line**: [line number from agent]
 **Issue**: [description from agent]
@@ -226,9 +426,9 @@ See detailed findings below.
 
 ## High Priority Issues
 
-[If none: "None found. ✅"]
+[If none in INCLUDED_ISSUES: "None found. ✅"]
 
-[For each high issue from agent output:]
+[For each high issue from INCLUDED_ISSUES:]
 ### [File Path]
 **Line**: [line number from agent]
 **Issue**: [description from agent]
@@ -239,7 +439,9 @@ See detailed findings below.
 
 ## Medium Priority Issues
 
-[For each medium issue from agent output:]
+[If none in INCLUDED_ISSUES: "None found. ✅"]
+
+[For each medium issue from INCLUDED_ISSUES:]
 ### [File Path]
 **Line**: [line number from agent]
 **Issue**: [description from agent]
@@ -249,7 +451,9 @@ See detailed findings below.
 
 ## Low Priority Issues
 
-[For each low issue from agent output:]
+[If none in INCLUDED_ISSUES: "None found. ✅"]
+
+[For each low issue from INCLUDED_ISSUES:]
 ### [File Path]
 **Line**: [line number from agent]
 **Issue**: [description from agent]
@@ -340,11 +544,14 @@ Show formatted summary in console:
 ## ⚠️  Code Review [If REVIEW_ROUND > 1: Round {REVIEW_ROUND}]: CHANGES REQUIRED
 
 **Files Reviewed**: [count]
-**Critical Issues**: [count] 🚨
-**High Priority Issues**: [count] ⚠️
-**Medium Issues**: [count]
-**Low Issues**: [count]
-**AI Slop Detected**: [count] 🤖
+**Critical Issues**: [count from INCLUDED_ISSUES] 🚨
+**High Priority Issues**: [count from INCLUDED_ISSUES] ⚠️
+**Medium Issues**: [count from INCLUDED_ISSUES]
+**Low Issues**: [count from INCLUDED_ISSUES]
+**AI Slop Detected**: [count from INCLUDED_ISSUES] 🤖
+
+[If EXCLUDED_ISSUES is not empty:]
+**Excluded Issues**: [count from EXCLUDED_ISSUES] (not affecting approval status)
 
 **Status**: Changes must be made before proceeding
 [If REVIEW_ROUND > 1:]
@@ -367,10 +574,13 @@ Show formatted summary in console:
 ## ✅ Code Review [If REVIEW_ROUND > 1: Round {REVIEW_ROUND}]: APPROVED
 
 **Files Reviewed**: [count]
-**Issues Found**: [total]
-- Medium: [count]
-- Low: [count]
-- AI Slop: [count] 🤖
+**Issues Found**: [total from INCLUDED_ISSUES]
+- Medium: [count from INCLUDED_ISSUES]
+- Low: [count from INCLUDED_ISSUES]
+- AI Slop: [count from INCLUDED_ISSUES] 🤖
+
+[If EXCLUDED_ISSUES is not empty:]
+**Excluded Issues**: [count from EXCLUDED_ISSUES] (not affecting approval)
 
 **Status**: ✅ This change is approved
 [If REVIEW_ROUND > 1:]
@@ -378,8 +588,11 @@ Show formatted summary in console:
 
 No critical or high-severity issues found. Code meets quality standards.
 
-[If medium/low issues exist:]
+[If medium/low issues exist in INCLUDED_ISSUES:]
 **Optional Improvements**: [count] medium/low priority suggestions available in report
+
+[If EXCLUDED_ISSUES is not empty:]
+💡 Tip: [count from EXCLUDED_ISSUES] issues were excluded by user selection. Use `--include-all` to review all issues.
 
 **Report Location**: `{REVIEW_FILE}`
 
@@ -388,18 +601,24 @@ No critical or high-severity issues found. Code meets quality standards.
 📊 Review progression: Round 1 → Round {REVIEW_ROUND} ✅
 ```
 
-**If NO issues at all:**
+**If NO issues in INCLUDED_ISSUES:**
 ```
 ## 🎉 Code Review [If REVIEW_ROUND > 1: Round {REVIEW_ROUND}]: APPROVED
 
 **Files Reviewed**: [count]
 **Issues Found**: 0
 
+[If EXCLUDED_ISSUES is not empty:]
+**Note**: [count from EXCLUDED_ISSUES] issues were excluded by user selection and are not blocking approval.
+
 **Status**: ✅ Excellent! No issues found.
 [If REVIEW_ROUND > 1:]
 **Review Round**: {REVIEW_ROUND} - Perfect! All previous issues resolved! 🎉
 
 The code looks great and meets all quality standards.
+
+[If EXCLUDED_ISSUES is not empty:]
+💡 Tip: Excluded issues are listed in the report. Use `--clear-exclusions` to reset for future reviews.
 
 **Report Location**: `{REVIEW_FILE}`
 [If REVIEW_ROUND > 1:]
@@ -442,14 +661,23 @@ Try again or review files manually.
 ## Example Usage
 
 ```bash
-# Review feature directory
+# Review feature directory (with interactive issue selection)
 /review feats/add-user-authentication
+
+# Review with all issues included (skip interactive selection)
+/review feats/add-user-authentication --include-all
+
+# Clear previous exclusions and start fresh
+/review feats/add-user-authentication --clear-exclusions
 
 # Review specific files
 /review --files backend/src/auth.ts,frontend/src/Login.tsx
 
 # Auto-detect changes
 /review
+
+# Combine flags
+/review feats/add-user-authentication --clear-exclusions --include-all
 ```
 
 ## Integration with Workflow
@@ -512,6 +740,7 @@ feats/add-authentication/
 ├── tasks.md
 ├── scratch-memory.md
 ├── development-report.md
+├── .review-exclusions.json     ← Persistent issue exclusions
 ├── code-review.md              ← Round 1: CHANGES REQUIRED
 ├── review-fix-plan.md           (fixes from round 1)
 ├── review-fix-report.md
@@ -531,6 +760,8 @@ feats/add-authentication/
 ## Notes
 
 - **Approval-Based**: Clear APPROVED/CHANGES REQUIRED status at top of report
+- **Interactive Issue Selection**: Users can select which issues to include in the report, excluding non-issues
+- **Persistent Exclusions**: Excluded issues are remembered across review rounds via `.review-exclusions.json`
 - **Round Tracking**: Automatically creates versioned reviews (see above)
 - **Iterative Workflow**: Supports multiple review → fix → review cycles until approved
 - **History Preservation**: Each round's report is kept for audit trail and comparison
@@ -539,5 +770,7 @@ feats/add-authentication/
 - **Actionable**: Agent provides specific recommendations with line numbers
 - **Research-Backed**: Agent uses .ai-docs patterns for best practice validation
 - **AI Slop Detection**: Identifies unnecessary comments, over-engineering, and premature abstractions typical of low-quality AI-generated code
+- **CRITICAL Issues Always Included**: Security vulnerabilities and critical issues cannot be excluded
+- **Flexible Review Modes**: Use `--include-all` to bypass selection or `--clear-exclusions` to reset
 
-The command orchestrates the review workflow while the agent provides the expertise and analysis. Multiple review rounds track progress toward code quality standards.
+The command orchestrates the review workflow while the agent provides the expertise and analysis. Multiple review rounds track progress toward code quality standards. Interactive issue selection reduces noise by allowing users to focus on real problems while maintaining an audit trail of all findings.
