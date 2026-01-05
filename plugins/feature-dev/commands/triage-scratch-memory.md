@@ -271,11 +271,19 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
 
 ### Phase 4: Document Updates
 
-**Goal**: Apply knowledge to .ai-docs with proper structure
+**Goal**: Apply knowledge to .ai-docs with proper structure using a strict two-pass approach with placeholders
+
+**CRITICAL**: This phase uses placeholders (-1) for line numbers to ensure accuracy after all edits are complete.
+
+---
+
+#### Pass 1: Content and Metadata (WITH PLACEHOLDERS)
+
+**Objective**: Add all content and metadata, but use placeholder values for line numbers.
 
 1. **Mark Phase 4 in_progress** in TodoWrite
 
-2. **Process Agent Recommendations**
+2. **Process Agent Recommendations - Add Content**
    For each pattern to be promoted:
 
    **For Existing Documents**:
@@ -303,10 +311,16 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    - Insert formatted pattern content
    - Maintain document flow and organization
 
-3. **Update Frontmatter - Pass 1: Metadata** (Following AI-DOCS-FRONTMATTER-STANDARD.md)
-   For each modified document:
+3. **Update Frontmatter Metadata with PLACEHOLDERS**
+
+   For each modified document, update frontmatter:
+
    ```yaml
-   # Add new patterns to patterns list (COMPREHENSIVE - include ALL variations)
+   ---
+   domain: [general|backend|frontend|security|database|deployment|testing|architecture]
+   title: "Document Title"
+   description: "Updated description mentioning new patterns"
+
    patterns:
      # ... existing patterns ...
      - new-pattern-name
@@ -314,99 +328,269 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
      - pattern-variation-2
      - related-technology-name
 
-   # Add keywords if applicable (lowercase supplementary terms)
    keywords:
      # ... existing keywords ...
-     - abbreviation
-     - synonym
+     - new-keyword-1
+     - new-keyword-2
 
-   # Update domain if changed (use exact enum value)
-   domain: [general|backend|frontend|security|database|deployment|testing|architecture]
-
-   # Update description to include new patterns
-   description: "[Updated description mentioning new patterns]"
-
-   # Update last_updated
-   last_updated: YYYY-MM-DD
-
-   # Add related documents if cross-references exist
-   related:
-     - related-doc.md
-
-   # Recalculate line_count using wc -l
-   line_count: N
-   ```
-
-   **IMPORTANT**: Do NOT update sections[] yet! Line numbers will be incorrect because
-   the frontmatter changes will shift all content down. sections[] will be updated in Pass 2.
-
-   **Pass 1 Validation Checklist**:
-   - ✅ patterns[] includes all variations and related terms (for +5 scoring)
-   - ✅ domain uses exact enum value (general|backend|frontend|security|database|deployment|testing|architecture)
-   - ✅ keywords[] includes supplementary terms (lowercase)
-   - ✅ description mentions key patterns
-   - ✅ complexity is basic|intermediate|advanced
-   - ✅ line_count matches `wc -l` output
-   - ✅ last_updated is current date
-
-3b. **Update Frontmatter - Pass 2: Section Line Numbers** (CRITICAL STEP)
-   After ALL content and metadata updates are complete:
-
-   ```bash
-   # Re-read the ENTIRE document to get final state after all edits
-   cat $AI_DOCS_DIR/[document].md
-
-   # Find actual section headings with exact line numbers
-   grep -n "^## " $AI_DOCS_DIR/[document].md
-
-   # Calculate line_end for each section:
-   # - For sections 1 to N-1: line_end = (next_section_start - 1)
-   # - For last section: line_end = line_count (from wc -l)
-   ```
-
-   Example output from grep:
-   ```
-   152:## Overview
-   155:## Technology Stack
-   161:## Directory Structure
-   560:## User Interaction Patterns
-   898:## Testing Considerations
-   ```
-
-   Now update sections[] array with VERIFIED line numbers:
-   ```yaml
    sections:
      - name: "Overview"
-       line_start: 152
-       line_end: 154          # Next section (155) - 1
-       summary: "..."
+       line_start: -1          # PLACEHOLDER - will calculate in Pass 2
+       line_end: -1            # PLACEHOLDER - will calculate in Pass 2
+       summary: "Overview of the document..."
      - name: "Technology Stack"
-       line_start: 155
-       line_end: 160          # Next section (161) - 1
-       summary: "..."
-     - name: "User Interaction Patterns"
-       line_start: 560
-       line_end: 897          # Next section (898) - 1
-       summary: "Comprehensive patterns for confirmation modals..."
-     - name: "Testing Considerations"
-       line_start: 898
-       line_end: 904          # Last section, use line_count
-       summary: "..."
+       line_start: -1          # PLACEHOLDER
+       line_end: -1            # PLACEHOLDER
+       summary: "Technology stack details..."
+     - name: "New Section Name"
+       line_start: -1          # PLACEHOLDER
+       line_end: -1            # PLACEHOLDER
+       summary: "Description with searchable terms, mention code if present..."
+     # ... all other sections with -1 placeholders ...
+
+   complexity: [basic|intermediate|advanced]
+   line_count: -1              # PLACEHOLDER - will calculate in Pass 2
+   last_updated: YYYY-MM-DD
+
+   related:
+     - related-doc.md
+   ---
    ```
 
-   **Pass 2 Validation Checklist**:
-   - ✅ Document re-read AFTER all edits (using Read tool)
-   - ✅ Used grep -n to find actual line numbers
-   - ✅ Each line_start verified to point to "## Section Name"
-   - ✅ Each line_end calculated as (next_section_start - 1)
-   - ✅ Last section line_end equals line_count
+   **CRITICAL RULES**:
+   - ⚠️ **DO NOT** run `wc -l` yet
+   - ⚠️ **DO NOT** run `grep -n` yet
+   - ⚠️ **ALL** line_start values must be -1
+   - ⚠️ **ALL** line_end values must be -1
+   - ⚠️ **line_count** must be -1
+   - ✅ DO update patterns[], keywords[], domain, description, last_updated
+   - ✅ DO provide section names and summaries
+
+4. **Pass 1 Validation Checklist**:
+   - ✅ All new content sections added
+   - ✅ patterns[] includes ALL variations (comprehensive list with 5+ variations per pattern)
+   - ✅ keywords[] includes supplementary terms (lowercase)
+   - ✅ domain uses exact enum value (general|backend|frontend|security|database|deployment|testing|architecture)
+   - ✅ description updated to mention new patterns
+   - ✅ last_updated is current date (YYYY-MM-DD)
+   - ✅ sections[] has entries for ALL sections with names and summaries
+   - ✅ **All line_start values are -1** (placeholders)
+   - ✅ **All line_end values are -1** (placeholders)
+   - ✅ **line_count is -1** (placeholder)
+   - ⚠️ **Document is NOT ready for use** (placeholders present)
+
+5. **Display Pass 1 Complete Message**:
+   ```markdown
+   ## Pass 1 Complete: Content and Metadata Added
+
+   **Documents Modified**: [count]
+   - [document1].md: Added [N] patterns, updated frontmatter with placeholders
+   - [document2].md: Added [N] patterns, updated frontmatter with placeholders
+
+   **Status**: ⚠️ Line numbers are placeholders (-1)
+   **State**: Documents contain -1 in line_start, line_end, and line_count
+   **Next**: Calculate actual line numbers in Pass 2
+
+   **CHECKPOINT**: All content and metadata edits must be 100% complete before proceeding to Pass 2.
+   ```
+
+---
+
+#### Pass 2: Calculate and Replace Line Numbers
+
+**Objective**: Calculate actual line numbers from final document state and replace ALL placeholders.
+
+**⚠️ CRITICAL**: Only start Pass 2 after Pass 1 is 100% complete for ALL documents.
+
+1. **For Each Modified Document, Calculate Line Numbers**
+
+   ```bash
+   # Step 1: Get FINAL line count (after all edits)
+   FINAL_LINE_COUNT=$(wc -l < /path/to/document.md)
+   echo "Final line count: $FINAL_LINE_COUNT"
+
+   # Step 2: Get ALL section headings with line numbers
+   grep -n "^## " /path/to/document.md
+
+   # Example output:
+   # 146:## Overview
+   # 149:## Technology Stack
+   # 155:## Directory Structure
+   # 620:## User Interaction Patterns
+   # 897:## Key Principles Summary
+   ```
+
+2. **Calculate line_end for Each Section**
+
+   For each section found by grep:
+   - If NOT the last section: `line_end = next_section_line_start - 1`
+   - If IS the last section: `line_end = FINAL_LINE_COUNT`
+
+   Example calculation:
+   ```
+   Section 1: Overview
+     line_start: 146
+     line_end: 148 (next section 149 - 1)
+
+   Section 2: Technology Stack
+     line_start: 149
+     line_end: 154 (next section 155 - 1)
+
+   Section N-1: User Interaction Patterns
+     line_start: 620
+     line_end: 896 (next section 897 - 1)
+
+   Section N: Key Principles Summary (LAST)
+     line_start: 897
+     line_end: 875 (FINAL_LINE_COUNT)
+   ```
+
+3. **Validate Calculated Numbers BEFORE Updating**
+
+   ```bash
+   # Validation checks
+
+   for section in sections:
+     # Check 1: line_start must be <= line_end
+     if [ $line_start -gt $line_end ]; then
+       echo "❌ ERROR: Section '$name' has line_start ($line_start) > line_end ($line_end)"
+       echo "   This indicates a calculation error - aborting!"
+       exit 1
+     fi
+
+     # Check 2: Verify line_start actually points to section heading
+     actual_line=$(sed -n "${line_start}p" document.md)
+     expected="## $name"
+     if [[ ! "$actual_line" =~ ^##[[:space:]].*${name}.* ]]; then
+       echo "❌ ERROR: Line $line_start doesn't contain section heading for '$name'"
+       echo "   Expected something like: $expected"
+       echo "   Found: $actual_line"
+       exit 1
+     fi
+   done
+
+   # Check 3: Last section must end at file end
+   last_section_end=${sections[-1].line_end}
+   if [ $last_section_end -ne $FINAL_LINE_COUNT ]; then
+     echo "❌ ERROR: Last section ends at $last_section_end but file has $FINAL_LINE_COUNT lines"
+     exit 1
+   fi
+
+   echo "✅ All line numbers validated successfully"
+   ```
+
+4. **Replace Placeholders with Actual Values**
+
+   Use Edit tool to replace the frontmatter sections[] and line_count:
+
+   ```yaml
+   # FIND (with placeholders):
+   sections:
+     - name: "Overview"
+       line_start: -1
+       line_end: -1
+       summary: "..."
+     - name: "Technology Stack"
+       line_start: -1
+       line_end: -1
+       summary: "..."
+     # ... more sections ...
+
+   complexity: intermediate
+   line_count: -1
+   last_updated: 2026-01-05
+
+   # REPLACE (with actual values from grep/calculation):
+   sections:
+     - name: "Overview"
+       line_start: 146
+       line_end: 148
+       summary: "..."
+     - name: "Technology Stack"
+       line_start: 149
+       line_end: 154
+       summary: "..."
+     - name: "User Interaction Patterns"
+       line_start: 620
+       line_end: 896
+       summary: "..."
+     - name: "Key Principles Summary"
+       line_start: 897
+       line_end: 875
+       summary: "..."
+
+   complexity: intermediate
+   line_count: 875
+   last_updated: 2026-01-05
+   ```
+
+5. **Pass 2 Validation Checklist**:
+   - ✅ All sections have line_start > 0 (no more -1 placeholders)
+   - ✅ All sections have line_end > 0 (no more -1 placeholders)
+   - ✅ line_count > 0 (no more -1 placeholder)
+   - ✅ All sections satisfy: line_start <= line_end
+   - ✅ Last section line_end == line_count
    - ✅ No gaps or overlaps between sections
-   - ✅ sections[] summaries include searchable terms and mention code if present
+   - ✅ Spot check: Read line at line_start verifies "## Section Name"
 
-4. **Create New Documents** (if recommended)
-   Follow AI-DOCS-FRONTMATTER-STANDARD.md structure with two-pass approach:
+6. **Error Detection: Check for Remaining Placeholders**
 
-   **Step 4a: Write document with placeholder sections[]**:
+   After Pass 2, verify no placeholders remain:
+
+   ```bash
+   check_for_placeholders() {
+     local doc=$1
+
+     # Check for -1 in line numbers
+     if grep -q "line_start: -1" "$doc" || \
+        grep -q "line_end: -1" "$doc" || \
+        grep -q "line_count: -1" "$doc"; then
+       echo "❌ ERROR: Document still contains placeholder line numbers (-1)"
+       echo "   Document: $doc"
+       echo "   Pass 2 incomplete or failed - aborting!"
+       exit 1
+     fi
+
+     echo "✅ No placeholders found in $doc"
+   }
+
+   # Run for all modified documents
+   check_for_placeholders "frontend-best-practices.md"
+   check_for_placeholders "backend-best-practices.md"
+   check_for_placeholders "technical-decisions.md"
+   ```
+
+7. **Display Pass 2 Complete Message**:
+   ```markdown
+   ## Pass 2 Complete: Line Numbers Calculated and Verified
+
+   **Documents Finalized**: [count]
+
+   **[document1].md**:
+   - Line count: [N] (was -1)
+   - Sections: [count] (all line numbers calculated and verified)
+   - Validation: ✅ All checks passed
+   - Placeholders: ✅ None remaining
+
+   **[document2].md**:
+   - Line count: [N] (was -1)
+   - Sections: [count] (all line numbers calculated and verified)
+   - Validation: ✅ All checks passed
+   - Placeholders: ✅ None remaining
+
+   **Status**: ✅ Documents ready for use
+   **Next**: Generate triage report
+
+   Ready to proceed to Phase 5? (Please confirm)
+   ```
+
+---
+
+#### Creating New Documents (if recommended)
+
+If the agent recommends creating new documents, follow this process:
+
+1. **Write Document with Placeholder Frontmatter**:
    ```markdown
    ---
    domain: [general|backend|frontend|security|database|deployment|testing|architecture]
@@ -421,9 +605,17 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    keywords:
      - lowercase-term
      - abbreviation
-   sections: []  # Will be populated in Step 4b
+   sections:
+     - name: "Overview"
+       line_start: -1        # PLACEHOLDER
+       line_end: -1          # PLACEHOLDER
+       summary: "..."
+     - name: "Pattern Section"
+       line_start: -1        # PLACEHOLDER
+       line_end: -1          # PLACEHOLDER
+       summary: "..."
    complexity: [basic|intermediate|advanced]
-   line_count: 0  # Will be calculated in Step 4b
+   line_count: -1            # PLACEHOLDER
    last_updated: YYYY-MM-DD
    related:
      - related-doc.md
@@ -434,66 +626,23 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    ## Overview
    [Introduction to the patterns in this document]
 
-   [Pattern sections follow]
+   ## Pattern Section
+   [Pattern content]
    ```
 
-   **Step 4b: Calculate actual line numbers**:
+2. **Calculate Line Numbers** (same as Pass 2 above):
    ```bash
-   # After writing complete document content
-   wc -l $AI_DOCS_DIR/new-document.md  # Get line_count
-
-   # Find section headings
+   wc -l $AI_DOCS_DIR/new-document.md
    grep -n "^## " $AI_DOCS_DIR/new-document.md
-
-   # Update frontmatter with actual sections[] and line_count
+   # Calculate line_end for each section
+   # Replace placeholders with actual values
    ```
 
-   **IMPORTANT**: Ensure comprehensive patterns[] list with all variations for optimal discovery
+---
 
-5. **Track All Changes**
-   Keep detailed log of:
-   - Which documents were modified
-   - Which patterns were added
-   - Which patterns were merged
-   - Which documents were created
-   - Any errors or warnings
+#### Summary of Document Updates
 
-5b. **Validate Line Numbers** (Quality Assurance)
-   For each updated document, verify sections[] accuracy:
-
-   ```bash
-   # Verify a few key sections by reading actual lines
-   # Example: Verify "User Interaction Patterns" section
-
-   # 1. Check line_start points to section heading
-   sed -n '560p' /path/to/frontend-best-practices.md
-   # Expected output: ## User Interaction Patterns
-
-   # 2. Check line_end is before next section
-   sed -n '897p' /path/to/frontend-best-practices.md
-   # Should be last line of section (not a heading)
-
-   sed -n '898p' /path/to/frontend-best-practices.md
-   # Expected output: ## Testing Considerations (next section)
-
-   # 3. Verify last section ends at line_count
-   wc -l /path/to/frontend-best-practices.md
-   # Should match last section's line_end
-   ```
-
-   **If validation fails**:
-   - Re-run Pass 2 (Step 3b) to recalculate line numbers
-   - Use grep -n to find correct positions
-   - Update frontmatter sections[] again
-
-   **Validation Success Criteria**:
-   - ✅ Each line_start shows "## Section Name"
-   - ✅ Each line_end is the line before next section
-   - ✅ No overlaps between sections
-   - ✅ Last section line_end equals total line_count
-   - ✅ All section names match actual headings
-
-6. **Display Update Summary**
+8. **Display Update Summary**
    ```markdown
    ## Phase 4 Complete: Document Updates
 
@@ -501,24 +650,41 @@ This command orchestrates knowledge extraction through a 5-phase workflow with u
    **Documents Created**: [count]
    **Total Patterns Added**: [count]
 
+   ### Pass 1 Results (Content & Metadata)
+   - ✅ All content sections added
+   - ✅ All frontmatter metadata updated
+   - ✅ Placeholders (-1) used for all line numbers
+
+   ### Pass 2 Results (Line Number Calculation)
+   - ✅ All line numbers calculated from final document state
+   - ✅ All validations passed (line_start <= line_end)
+   - ✅ All placeholders replaced with actual values
+   - ✅ No -1 values remaining in any document
+
    ### Modified Documents
 
    **backend-best-practices.md**:
-   - Added: confirmation-modal-pattern
-   - Added: immutable-state-updates
+   - Added: confirmation-modal-pattern (NEW)
+   - Added: immutable-state-updates (NEW)
    - Merged: service-layer-error-handling (combined with existing)
-   - Updated frontmatter: 3 new patterns, sections updated
+   - Patterns: [old_count] → [new_count] (+[diff] variations)
+   - Keywords: [old_count] → [new_count] (+[diff] terms)
+   - Line count: [old] → [new] (+[diff] lines)
+   - Sections: All line numbers verified ✅
 
    **frontend-patterns.md**:
-   - Added: react-hooks-state-management
-   - Updated frontmatter: 1 new pattern
+   - Added: react-hooks-state-management (NEW)
+   - Patterns: [old_count] → [new_count] (+[diff] variations)
+   - Line count: [old] → [new] (+[diff] lines)
+   - Sections: All line numbers verified ✅
 
    ### Created Documents
 
    **integration-patterns.md**:
-   - New document with 4 patterns
-   - Domain: general
-   - 156 lines
+   - New document with [N] patterns
+   - Domain: [domain]
+   - Line count: [N] lines
+   - Sections: All line numbers verified ✅
 
    **Next**: Generate triage report
 

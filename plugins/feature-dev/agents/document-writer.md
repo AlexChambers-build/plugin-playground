@@ -204,51 +204,94 @@ Structure each pattern with:
 
 ### Frontmatter Updates Required
 
-**IMPORTANT**: The orchestrating command uses a two-pass approach for frontmatter updates:
-- **Pass 1**: You provide patterns[], keywords[], domain, description, and related[]
-- **Pass 2**: The orchestrator calculates sections[] line numbers AFTER all edits are complete
+**IMPORTANT**: The orchestrating command uses a two-pass approach with placeholders for line numbers:
 
-This ensures line numbers are accurate, accounting for frontmatter growth that shifts content down.
+**Pass 1** (Your Input + Orchestrator Action):
+- You provide: patterns[], keywords[], domain, description, section names/summaries, related[]
+- Orchestrator inserts: All sections with `line_start: -1` and `line_end: -1` (placeholders)
+- Orchestrator sets: `line_count: -1` (placeholder)
 
-**Your responsibility**: Provide comprehensive metadata and section descriptions. The orchestrator
-will handle exact line number calculation using grep after all content is finalized.
+**Pass 2** (Orchestrator Only):
+- After ALL content and metadata edits are complete
+- Orchestrator runs: `wc -l` and `grep -n "^## "` on final document state
+- Orchestrator calculates: Actual line numbers for all sections
+- Orchestrator replaces: All `-1` placeholders with real values
+- Orchestrator validates: line_start <= line_end, last section ends at file end
+
+**Why Placeholders**: Using `-1` prevents accidentally using stale line numbers captured before
+frontmatter growth. The orchestrator NEVER runs wc/grep until Pass 2, ensuring line numbers
+reflect the final document state.
+
+**Your Responsibility** (What to Provide):
+- Section NAMES (e.g., "User Interaction Patterns")
+- Section SUMMARIES with searchable terms (mention code if present)
+- Section placement guidance (INSERT NEW or MERGE WITH EXISTING)
+- Comprehensive patterns[] with ALL variations (5+ per pattern for +5 scoring)
+- Supplementary keywords[] (lowercase terms)
+
+**Orchestrator's Responsibility** (What You DON'T Provide):
+- line_start values (orchestrator sets to -1 in Pass 1, calculates in Pass 2)
+- line_end values (orchestrator sets to -1 in Pass 1, calculates in Pass 2)
+- line_count (orchestrator sets to -1 in Pass 1, calculates in Pass 2)
 
 ---
 
-[For each document that needs updating, provide COMPREHENSIVE patterns list with ALL variations]
+### Example Frontmatter Update Recommendations
 
-**backend-best-practices.md - Add to patterns list**:
+For each document that needs updating, provide comprehensive metadata:
+
+**frontend-best-practices.md - Patterns to ADD**:
 ```yaml
 patterns:
-  # ... existing patterns ...
-  - confirmation-modal-pattern
-  - confirmation-dialog
+  # ... existing patterns remain ...
+  # NEW patterns with comprehensive variations:
+  - user-interaction-patterns
+  - confirmation-modal
   - destructive-action-protection
+  - modal-confirmation
+  - confirmation-pattern
+  - action-confirmation
   - immutable-state-updates
-  - immutability
-  - state-management
+  - immutable-array-modification
+  - react-state-management
+  - non-mutating-array-updates
+  - functional-array-manipulation
+  - react-immutability
+  - state-based-action-control
+  - state-dependent-actions
+  - entity-state-validation
+  - action-permission-control
 ```
 
-**backend-best-practices.md - Add to keywords list (if applicable)**:
+**frontend-best-practices.md - Keywords to ADD**:
 ```yaml
 keywords:
-  # ... existing keywords ...
+  # ... existing keywords remain ...
+  - react
   - modal
-  - dialog
+  - confirmation
+  - state
   - immutability
+  - hooks
+  - components
 ```
 
-**backend-best-practices.md - Sections to add** (line numbers TBD by orchestrator):
-- **Section Name**: "Confirmation Modal Pattern"
-- **Summary**: "Confirmation modal for destructive actions, preventing accidental deletions with explicit user confirmation, includes code examples"
-- **Action**: INSERT NEW SECTION (or MERGE WITH EXISTING if similar pattern exists)
+**frontend-best-practices.md - Sections to ADD** (orchestrator will use -1 placeholders):
+- **Section Name**: "User Interaction Patterns"
+- **Summary**: "Confirmation modals for destructive actions with state management patterns, immutable state updates using filter for React arrays, state-based action control for workflow validation with TypeScript code examples"
+- **Placement**: INSERT NEW SECTION after "Git and Version Control"
+- **Note**: Orchestrator will add this with `line_start: -1, line_end: -1` in Pass 1, calculate real values in Pass 2
 
-**backend-best-practices.md - Related documents** (if cross-references exist):
+**frontend-best-practices.md - Related Documents** (if cross-references exist):
 ```yaml
 related:
-  - frontend-best-practices.md
+  - backend-best-practices.md  # If patterns reference backend concepts
 ```
-```
+
+---
+
+**CRITICAL**: Never provide line_start, line_end, or line_count values in your output. The
+orchestrator handles all line number calculations using the two-pass placeholder approach.
 
 ## Extraction Rules
 
@@ -274,7 +317,9 @@ related:
    - Use exact domain enum values
    - Include `keywords[]` for supplementary search terms
    - Provide section summaries with searchable terms (mention code if present)
-   - **Note**: Line numbers for sections[] will be calculated by the orchestrator in Pass 2
+   - **CRITICAL**: DO NOT provide line_start, line_end, or line_count values
+   - The orchestrator uses -1 placeholders in Pass 1, calculates real values in Pass 2
+   - This ensures line numbers reflect final document state (after frontmatter growth)
    - Remember: comprehensive patterns = better discovery (exact match = +5 scoring)
 
 ## Example Extraction
